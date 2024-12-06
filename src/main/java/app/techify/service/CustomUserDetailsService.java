@@ -20,9 +20,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         Account account = accountRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
+        // Xử lý trường hợp mật khẩu null (đăng nhập bằng Google)
+        String password = account.getPasswordHash() != null ? account.getPasswordHash() : "";
+
         return User.builder()
                 .username(account.getEmail())
-                .password(account.getPasswordHash())
+                .password(password)
                 .roles(account.getRole())
                 .build();
     }

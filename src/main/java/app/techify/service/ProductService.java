@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,7 +62,7 @@ public class ProductService {
 
     public void updateProduct(String id, @Valid Product product) {
         Product productToUpdate = productRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
 
         // Update basic fields
         productToUpdate.setCategory(product.getCategory());
@@ -108,39 +109,20 @@ public class ProductService {
         dto.setId(product.getId());
         dto.setName(product.getName());
         dto.setThumbnail(product.getThumbnail());
-        dto.setCategory(product.getCategory().getName());
+        dto.setCategory(product.getCategory());
         dto.setBrand(product.getBrand());
         dto.setOrigin(product.getOrigin());
         dto.setUnit(product.getUnit());
         dto.setSellPrice(product.getSellPrice());
-        dto.setColors(product.getColor().getColorJson());
+        dto.setColors(Optional.ofNullable(product.getColor()).map(Color::getColorJson).orElse(null));
         dto.setDescription(product.getDescription());
         dto.setSerial(product.getSerial());
         dto.setWarranty(product.getWarranty());
-        dto.setImages(product.getImage().getImageJson());
-        dto.setAttributes(product.getAttribute().getAttributeJson());
+        dto.setImages(Optional.ofNullable(product.getImage()).map(Image::getImageJson).orElse(null));
+        dto.setAttributes(Optional.ofNullable(product.getAttribute()).map(Attribute::getAttributeJson).orElse(null));
         dto.setCreatedAt(product.getCreatedAt());
-        // Calculate average rating with specific rounding logic
-        Set<Review> reviews = product.getReviews();
-        if (reviews != null && !reviews.isEmpty()) {
-            double avgRating = reviews.stream()
-                .mapToInt(review -> review.getRating().intValue())
-                .average()
-                .orElse(0.0);
-            
-            // Custom rounding logic:
-            // If decimal part <= 0.5, round down
-            // If decimal part > 0.5, round up
-            double decimal = avgRating - Math.floor(avgRating);
-            if (decimal <= 0.5) {
-                dto.setAvgRating((int) Math.floor(avgRating));
-            } else {
-                dto.setAvgRating((int) Math.ceil(avgRating));
-            }
-        } else {
-            dto.setAvgRating(0);
-        }
-
+        dto.setAvgRating(calculateAverageRating(product.getReviews()));
+        dto.setReviewCount(product.getReviews().size());
         // Calculate promotion price
         BigDecimal promotionPrice = calculatePromotionPrice(product.getId(), product.getSellPrice());
         dto.setPromotionPrice(promotionPrice);
@@ -149,6 +131,22 @@ public class ProductService {
         }
 
         return dto;
+    }
+
+    private int calculateAverageRating(Set<Review> reviews) {
+        if (reviews == null || reviews.isEmpty()) {
+            return 0;
+        }
+
+        double avgRating = reviews.stream()
+                .mapToInt(review -> review.getRating().intValue())
+                .average()
+                .orElse(0.0);
+
+        // Custom rounding logic:
+        // If decimal part < 0.5, round down
+        // If decimal part >= 0.5, round up
+        return (int) Math.round(avgRating);
     }
 
     private BigDecimal calculatePromotionPrice(String productId, BigDecimal sellPrice) {
@@ -186,8 +184,8 @@ public class ProductService {
 
     public GetProductDto getProductById(String id) {
         Product product = productRepository.findByIdWithDetails(id)
-            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
-        
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+
         return convertToDTO(product);
     }
 
@@ -195,13 +193,13 @@ public class ProductService {
         List<Product> products = productRepository.findAllByCategoryIdWithDetails(categoryId);
         if (brands != null && !brands.isEmpty()) {
             products = products.stream()
-                .filter(product -> brands.contains(product.getBrand()))
-                .toList();
+                    .filter(product -> brands.contains(product.getBrand()))
+                    .toList();
         }
         if (attributes != null && !attributes.isEmpty()) {
             products = products.stream()
-                .filter(product -> attributes.contains(product.getAttribute().getAttributeJson()))
-                .toList();
+                    .filter(product -> attributes.contains(product.getAttribute().getAttributeJson()))
+                    .toList();
         }
         Pageable pageable = PageRequest.of(page, size);
         Page<Product> productsPage = new PageImpl<>(products, pageable, products.size());
@@ -210,34 +208,34 @@ public class ProductService {
 
     public List<GetProductDto> getProductsOnSale() {
         List<Product> allProducts = productRepository.findAllWithDetails();
-        
+
         return allProducts.stream()
-            .filter(product -> {
-                List<ProductPromotion> promotions = productPromotionRepository.findByProductIdWithPromotion(product.getId());
-                return promotions.stream()
-                    .anyMatch(pp -> isPromotionActive(pp.getPromotion()));
-            })
-            .map(this::convertToDTO)
-            .limit(8)
-            .collect(Collectors.toList());
+                .filter(product -> {
+                    List<ProductPromotion> promotions = productPromotionRepository.findByProductIdWithPromotion(product.getId());
+                    return promotions.stream()
+                            .anyMatch(pp -> isPromotionActive(pp.getPromotion()));
+                })
+                .map(this::convertToDTO)
+                .limit(8)
+                .collect(Collectors.toList());
     }
 
     public Instant getEarliestPromotionEndDate(String productId) {
         List<ProductPromotion> promotions = productPromotionRepository.findByProductIdWithPromotion(productId);
         return promotions.stream()
-            .filter(pp -> isPromotionActive(pp.getPromotion()))
-            .map(pp -> pp.getPromotion().getEndDate())
-            .min(Instant::compareTo)
-            .orElse(null);
+                .filter(pp -> isPromotionActive(pp.getPromotion()))
+                .map(pp -> pp.getPromotion().getEndDate())
+                .min(Instant::compareTo)
+                .orElse(null);
     }
 
     public List<GetProductDto> getNewestProducts() {
         List<Product> products = productRepository.findAllWithDetails();
         return products.stream()
-            .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // Sort by creation date, newest first
-            .limit(4) // Get only 4 products
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+                .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // Sort by creation date, newest first
+                .limit(4) // Get only 4 products
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     public List<GetProductDto> getTopSellingProducts(int limit) {
@@ -257,19 +255,19 @@ public class ProductService {
         if (brands != null && !brands.isEmpty()) {
             for (String brand : brands) {
                 products = products.stream()
-                    .filter(product -> product.getBrand().equals(brand))
-                    .toList();
+                        .filter(product -> product.getBrand().equals(brand))
+                        .toList();
             }
         }
         return products.stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     public List<GetProductDto> getAllProductsByCategory(Integer categoryId) {
         List<Product> products = productRepository.findAllByCategoryIdWithDetails(categoryId);
         return products.stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

@@ -66,6 +66,14 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder() {
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                if (encodedPassword == null || encodedPassword.isEmpty()) {
+                    return rawPassword == null || rawPassword.toString().isEmpty();
+                }
+                return super.matches(rawPassword, encodedPassword);
+            }
+        };
     }
 }

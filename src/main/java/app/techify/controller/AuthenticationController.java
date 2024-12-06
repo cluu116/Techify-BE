@@ -20,7 +20,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 
@@ -91,6 +93,7 @@ public class AuthenticationController {
 
         return ResponseEntity.badRequest().body("Invalid refresh token");
     }
+
     @GetMapping("")
     public ResponseEntity<?> getUser() {
         try {
@@ -154,10 +157,21 @@ public class AuthenticationController {
             account.setRefreshToken(refreshToken);
             accountRepository.save(account);
 
-            return ResponseEntity.ok(new AuthResponse(jwtToken, refreshToken));
+            URI redirectUri = UriComponentsBuilder.fromUriString("http://localhost:5173/google-auth-callback")
+                    .queryParam("accessToken", jwtToken)
+                    .queryParam("refreshToken", refreshToken)
+                    .build().toUri();
+
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(redirectUri)
+                    .build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Lỗi xử lý đăng nhập Google: " + e.getMessage());
+            URI errorUri = UriComponentsBuilder.fromUriString("http://localhost:5173/google-auth-callback")
+                    .queryParam("error", e.getMessage())
+                    .build().toUri();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(errorUri)
+                    .build();
         }
     }
 
@@ -210,10 +224,21 @@ public class AuthenticationController {
             account.setRefreshToken(refreshToken);
             accountRepository.save(account);
 
-            return ResponseEntity.ok(new AuthResponse(jwtToken, refreshToken));
+            URI redirectUri = UriComponentsBuilder.fromUriString("http://localhost:5173/facebook-auth-callback")
+                    .queryParam("accessToken", jwtToken)
+                    .queryParam("refreshToken", refreshToken)
+                    .build().toUri();
+
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(redirectUri)
+                    .build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Lỗi xử lý đăng nhập Facebook: " + e.getMessage());
+            URI errorUri = UriComponentsBuilder.fromUriString("http://localhost:5173/facebook-auth-callback")
+                    .queryParam("error", e.getMessage())
+                    .build().toUri();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(errorUri)
+                    .build();
         }
     }
 }
