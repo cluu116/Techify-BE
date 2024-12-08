@@ -1,5 +1,6 @@
 package app.techify.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -19,11 +20,12 @@ import java.time.Instant;
 @Table(name = "review")
 public class Review {
     @Id
-    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
+    @JsonBackReference
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -38,7 +40,6 @@ public class Review {
     @Column(name = "comment")
     private String comment;
 
-    @NotNull
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

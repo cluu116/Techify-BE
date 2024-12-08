@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class UserResponse {
+    private String id;
     private String fullName;
     private String province;
     private String district;
@@ -16,4 +17,5 @@ public class UserResponse {
     private String altPhone;
     private String email;
     private String role;
+    private String avatar;
 }

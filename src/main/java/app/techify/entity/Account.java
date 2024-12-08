@@ -52,4 +52,9 @@ public class Account {
     @Column(name = "facebook_id", length = 50)
     private String facebookId;
 
+    @Size(max = 255)
+    @Nationalized
+    @Column(name = "avatar")
+    private String avatar;
+
 }

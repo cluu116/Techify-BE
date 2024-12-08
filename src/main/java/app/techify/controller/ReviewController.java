@@ -1,5 +1,6 @@
 package app.techify.controller;
 
+import app.techify.dto.ReviewDto;
 import app.techify.entity.Review;
 import app.techify.service.ReviewService;
 import jakarta.validation.Valid;
@@ -17,8 +18,9 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @GetMapping("/product/{productId}")
-    public ResponseEntity<List<Review>> getReviewsByProductId(@PathVariable String productId) {
-        return ResponseEntity.ok(reviewService.getReviewsByProductId(productId));
+    public ResponseEntity<List<ReviewDto>> getReviewsByProductId(@PathVariable String productId) {
+        List<ReviewDto> reviewDtos = reviewService.getReviewsByProductId(productId);
+        return ResponseEntity.ok(reviewDtos);
     }
 
     @PostMapping("")

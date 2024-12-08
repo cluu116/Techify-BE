@@ -26,5 +26,6 @@ public class GetProductDto {
     private String images;
     private String attributes;
     private Instant promotionEndDate;
+    private String formattedDiscount;
     private Instant createdAt;
 }

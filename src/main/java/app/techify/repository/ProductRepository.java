@@ -78,4 +78,6 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             "GROUP BY p " +
             "ORDER BY COALESCE(SUM(od.quantity), 0) DESC")
     List<Product> findTopSellingProducts(Pageable pageable);
+
+    List<Product> findByCategoryIdAndIdNot(Integer categoryId, String productId);
 }

@@ -38,6 +38,7 @@ public class AccountService {
         Customer customer = customerRepository.findCustomerByAccount(account);
 
         return UserResponse.builder()
+                .id(customer.getId())
                 .fullName(customer.getFullName())
                 .role(account.getRole())
                 .province(customer.getProvince())
@@ -48,6 +49,7 @@ public class AccountService {
                 .phone(customer.getPhone())
                 .altPhone(customer.getAltPhone())
                 .email(username)
+                .avatar(account.getAvatar())
                 .build();
     }
 }

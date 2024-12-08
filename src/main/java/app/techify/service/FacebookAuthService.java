@@ -59,7 +59,7 @@ public class FacebookAuthService {
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
         ResponseEntity<Map> response = restTemplate.exchange(
-                "https://graph.facebook.com/v21.0/me?fields=id,name,email",
+                "https://graph.facebook.com/v21.0/me?fields=id,name,email,picture",
                 HttpMethod.GET,
                 entity,
                 Map.class

@@ -115,4 +115,17 @@ public class ProductController {
             return ResponseEntity.badRequest().build();
         }
     }
+    @GetMapping("/{id}/related")
+    public ResponseEntity<List<GetProductDto>> getRelatedProducts(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "4") int limit) {
+        try {
+            List<GetProductDto> relatedProducts = productService.getRelatedProducts(id, limit);
+            return ResponseEntity.ok(relatedProducts);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

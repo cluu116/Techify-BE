@@ -140,6 +140,7 @@ public class AuthenticationController {
                         .email(email)
                         .googleId(googleId)
                         .role("CUSTOMER")
+                        .avatar((String) userInfo.get("picture"))
                         .build();
                 account = accountService.createAccount(account);
 
@@ -207,6 +208,7 @@ public class AuthenticationController {
                         .email(email)
                         .facebookId(facebookId)
                         .role("CUSTOMER")
+                        .avatar((String) userInfo.get("picture.data.url"))
                         .build();
                 account = accountService.createAccount(account);
 

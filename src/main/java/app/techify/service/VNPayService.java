@@ -36,7 +36,6 @@ public class VNPayService {
         vnp_Params.put("vnp_Command", "pay");
         vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
         vnp_Params.put("vnp_Amount", String.valueOf(amount.multiply(new BigDecimal("100")).longValue()));
-        vnp_Params.put("vnp_BankCode", "NCB");
         String vnp_CreateDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
         vnp_Params.put("vnp_CurrCode", "VND");
@@ -80,29 +79,38 @@ public class VNPayService {
     }
 
     public boolean verifyPaymentResult(Map<String, String> vnp_Params) {
-        String vnp_SecureHash = vnp_Params.get("vnp_SecureHash");
-        vnp_Params.remove("vnp_SecureHash");
-        vnp_Params.remove("vnp_SecureHashType");
 
-        List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
+        String vnp_SecureHash = vnp_Params.get("vnp_SecureHash");
+
+        if (vnp_SecureHash == null) {
+            return false;
+        }
+
+        Map<String, String> cleanParams = new HashMap<>(vnp_Params);
+        cleanParams.remove("vnp_SecureHash");
+        cleanParams.remove("vnp_SecureHashType");
+
+        List<String> fieldNames = new ArrayList<>(cleanParams.keySet());
         Collections.sort(fieldNames);
         StringBuilder hashData = new StringBuilder();
-        Iterator<String> itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = itr.next();
-            String fieldValue = vnp_Params.get(fieldName);
+
+        for (String fieldName : fieldNames) {
+            String fieldValue = cleanParams.get(fieldName);
             if ((fieldValue != null) && (!fieldValue.isEmpty())) {
                 hashData.append(fieldName);
                 hashData.append('=');
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
-                    hashData.append('&');
-                }
+                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8));
+                hashData.append('&');
             }
         }
 
+        if (!hashData.isEmpty()) {
+            hashData.setLength(hashData.length() - 1);
+        }
+
         String secureHash = hmacSHA512(vnpHashSecret, hashData.toString());
-        return secureHash.equals(vnp_SecureHash);
+
+        return secureHash.equalsIgnoreCase(vnp_SecureHash);
     }
 
     private String hmacSHA512(String key, String data) {

@@ -1,6 +1,7 @@
 package app.techify.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -95,6 +96,7 @@ public class Product {
     private Set<ProductPromotion> productPromotions = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "product")
+    @JsonManagedReference
     private Set<Review> reviews = new LinkedHashSet<>();
 
     public int getTotalSoldQuantity() {

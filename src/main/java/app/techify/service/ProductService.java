@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -128,6 +129,20 @@ public class ProductService {
         dto.setPromotionPrice(promotionPrice);
         if (promotionPrice.compareTo(product.getSellPrice()) < 0) {
             dto.setPromotionEndDate(getEarliestPromotionEndDate(product.getId()));
+
+            ProductPromotion activePromotion = getActivePromotion(product.getId());
+            if (activePromotion != null) {
+                Promotion promotion = activePromotion.getPromotion();
+                String formattedDiscount;
+                if (promotion.getDiscountType()) {
+                    DecimalFormat dfPercent = new DecimalFormat("#");
+                    formattedDiscount = dfPercent.format(promotion.getDiscountValue()) + "%";
+                } else {
+                    DecimalFormat dfCurrency = new DecimalFormat("#,###");
+                    formattedDiscount = dfCurrency.format(promotion.getDiscountValue()) + "đ";
+                }
+                dto.setFormattedDiscount(formattedDiscount);
+            }
         }
 
         return dto;
@@ -174,7 +189,13 @@ public class ProductService {
         }
         return lowestPrice;
     }
-
+    private ProductPromotion getActivePromotion(String productId) {
+        List<ProductPromotion> productPromotions = productPromotionRepository.findByProductIdWithPromotion(productId);
+        return productPromotions.stream()
+                .filter(pp -> isPromotionActive(pp.getPromotion()))
+                .findFirst()
+                .orElse(null);
+    }
     private boolean isPromotionActive(Promotion promotion) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate = LocalDateTime.ofInstant(promotion.getStartDate(), ZoneId.systemDefault());
@@ -267,6 +288,22 @@ public class ProductService {
     public List<GetProductDto> getAllProductsByCategory(Integer categoryId) {
         List<Product> products = productRepository.findAllByCategoryIdWithDetails(categoryId);
         return products.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<GetProductDto> getRelatedProducts(String productId, int limit) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+
+        List<Product> relatedProducts = productRepository.findByCategoryIdAndIdNot(
+                product.getCategory().getId(), productId);
+
+        return relatedProducts.stream()
+                .filter(p -> p.getBrand().equals(product.getBrand()) ||
+                        (p.getAttribute() != null && product.getAttribute() != null &&
+                                p.getAttribute().getAttributeJson().equals(product.getAttribute().getAttributeJson())))
+                .limit(limit)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
