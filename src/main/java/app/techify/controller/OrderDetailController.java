@@ -1,5 +1,6 @@
 package app.techify.controller;
 
+import app.techify.dto.OrderDetailDto;
 import app.techify.dto.OrderDetailResponse;
 import app.techify.entity.OrderDetail;
 import app.techify.service.OrderDetailService;
@@ -20,7 +21,7 @@ import java.util.List;
 public class OrderDetailController {
     private final OrderDetailService orderDetailService;
     @PostMapping("")
-    public ResponseEntity<Void> createOrderDetail(@RequestBody List<OrderDetail> orderDetails) {
+    public ResponseEntity<Void> createOrderDetail(@RequestBody List<OrderDetailDto> orderDetails) {
         orderDetailService.createOrderDetail(orderDetails);
         return ResponseEntity.ok().build();
     }

@@ -10,6 +10,7 @@ public class OrderDetailResponse {
     private String productName;
     private String productThumbnail;
     private String color;
+    private String size;
     private BigDecimal price;
     private Integer quantity;
     private BigDecimal total;

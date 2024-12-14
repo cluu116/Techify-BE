@@ -23,9 +23,12 @@ public class GetProductDto {
     private Integer reviewCount;
     private Integer avgRating;
     private String colors;
+    private String sizes;
     private String images;
     private String attributes;
     private Instant promotionEndDate;
     private String formattedDiscount;
+    private Integer inventoryQuantity;
+    private String status;
     private Instant createdAt;
 }

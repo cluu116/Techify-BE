@@ -2,12 +2,18 @@ package app.techify.controller;
 
 import app.techify.dto.PaymentRequest;
 import app.techify.service.VNPayService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,44 +31,44 @@ public class VNPayController {
     }
 
     @GetMapping("/payment-result")
-    public ResponseEntity<Map<String, Object>> paymentResult(@RequestParam Map<String, String> queryParams) {
-        Map<String, Object> response = new HashMap<>();
+    public void paymentResult(@RequestParam Map<String, String> queryParams, HttpServletResponse response) throws IOException {
+        Map<String, Object> result = new HashMap<>();
         try {
             if (queryParams.isEmpty()) {
-                response.put("success", false);
-                response.put("message", "No payment information received");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            boolean isValidSignature = vnPayService.verifyPaymentResult(queryParams);
-
-            if (isValidSignature) {
-                String vnp_ResponseCode = queryParams.get("vnp_ResponseCode");
-
-                if ("00".equals(vnp_ResponseCode)) {
-                    // Payment successful
-                    response.put("success", true);
-                    response.put("message", "Thanh toán thành công");
-                    response.put("transactionNo", queryParams.get("vnp_TransactionNo"));
-                    response.put("amount", queryParams.get("vnp_Amount"));
-                    response.put("orderInfo", queryParams.get("vnp_OrderInfo"));
-                    return ResponseEntity.ok(response);
-                } else {
-                    // Payment failed
-                    response.put("success", false);
-                    response.put("message", "Thanh toán thất bại");
-                    response.put("responseCode", vnp_ResponseCode);
-                    return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(response);
-                }
+                result.put("success", false);
+                result.put("message", "No payment information received");
             } else {
-                response.put("success", false);
-                response.put("message", "Invalid signature");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                boolean isValidSignature = vnPayService.verifyPaymentResult(queryParams);
+
+                if (isValidSignature) {
+                    String vnp_ResponseCode = queryParams.get("vnp_ResponseCode");
+
+                    if ("00".equals(vnp_ResponseCode)) {
+                        // Payment successful
+                        result.put("success", true);
+                        result.put("message", "Thanh toán thành công");
+                        result.put("transactionNo", queryParams.get("vnp_TransactionNo"));
+                        result.put("amount", queryParams.get("vnp_Amount"));
+                        result.put("orderInfo", queryParams.get("vnp_OrderInfo"));
+                    } else {
+                        // Payment failed
+                        result.put("success", false);
+                        result.put("message", "Thanh toán thất bại");
+                        result.put("responseCode", vnp_ResponseCode);
+                    }
+                } else {
+                    result.put("success", false);
+                    result.put("message", "Invalid signature");
+                }
             }
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error processing payment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            result.put("success", false);
+            result.put("message", "Error processing payment: " + e.getMessage());
         }
+
+        // Chuyển hướng về frontend với kết quả thanh toán
+        String frontendUrl = "http://localhost:5173/payment-result";
+        String redirectUrl = frontendUrl + "?result=" + URLEncoder.encode(new ObjectMapper().writeValueAsString(result), StandardCharsets.UTF_8);
+        response.sendRedirect(redirectUrl);
     }
 }

@@ -21,17 +21,18 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
 
-    public Order createOrder(Order order) {
+    public OrderResponse createOrder(Order order) {
         String orderId = "PO_" + Instant.now().toEpochMilli();
         order.setId(orderId);
         order.setCreatedAt(Instant.now());
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        return convertToOrderResponse(savedOrder);
     }
 
-    public Order updateOrder(Order order) {
+    public OrderResponse updateOrder(Order order) {
         Order existingOrder = orderRepository.findById(order.getId())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        
+
         // Update only the fields that should change
         existingOrder.setStatus(order.getStatus());
         existingOrder.setCustomer(order.getCustomer());
@@ -40,24 +41,27 @@ public class OrderService {
         existingOrder.setTransportVendor(order.getTransportVendor());
         existingOrder.setVoucher(order.getVoucher());
         existingOrder.setShippingAddress(order.getShippingAddress());
-        
-        // Update the updatedAt timestamp
+
         existingOrder.setUpdatedAt(Instant.now());
-        
-        return orderRepository.save(existingOrder);
+
+        Order updatedOrder = orderRepository.save(existingOrder);
+        return convertToOrderResponse(updatedOrder);
     }
 
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(this::convertToOrderResponse)
+                .collect(Collectors.toList());
     }
+
 
     public OrderResponse getOrderById(String id) {
-        Order order = orderRepository.findById(id).orElseThrow();
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
         return convertToOrderResponse(order);
     }
 
     public List<OrderResponse> getAllOrdersWithDetails() {
-        List<Order> orders = getAllOrders();
+        List<Order> orders = orderRepository.findAll();
         return orders.stream().map(this::convertToOrderResponse).collect(Collectors.toList());
     }
 
@@ -128,10 +132,10 @@ public class OrderService {
     public OrderResponse updateOrderStatus(String id, Short status) {
         Order existingOrder = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        
+
         existingOrder.setStatus(status);
         existingOrder.setUpdatedAt(Instant.now());
-        
+
         Order updatedOrder = orderRepository.save(existingOrder);
         return convertToOrderResponse(updatedOrder);
     }

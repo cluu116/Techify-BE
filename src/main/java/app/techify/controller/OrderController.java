@@ -24,12 +24,12 @@ public class OrderController {
     }
 
     @PostMapping("")
-    public ResponseEntity<Order> createOrder(@Valid @RequestBody Order order) {
+    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody Order order) {
         return ResponseEntity.ok(orderService.createOrder(order));
     }
 
     @PutMapping("")
-    public ResponseEntity<Order> updateOrder(@Valid @RequestBody Order order) {
+    public ResponseEntity<OrderResponse> updateOrder(@Valid @RequestBody Order order) {
         return ResponseEntity.ok(orderService.updateOrder(order));
     }
 

@@ -118,7 +118,7 @@ public class ProductController {
     @GetMapping("/{id}/related")
     public ResponseEntity<List<GetProductDto>> getRelatedProducts(
             @PathVariable String id,
-            @RequestParam(defaultValue = "4") int limit) {
+            @RequestParam(defaultValue = "12") int limit) {
         try {
             List<GetProductDto> relatedProducts = productService.getRelatedProducts(id, limit);
             return ResponseEntity.ok(relatedProducts);

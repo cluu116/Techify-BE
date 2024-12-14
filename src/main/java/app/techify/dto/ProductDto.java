@@ -27,6 +27,8 @@ public class ProductDto {
     @Size(max = 20, message = "Don vi tinh phai nho hon 20 ky tu")
     @NotBlank(message = "Don vi tinh khong duoc de trong")
     private String unit;
+    private Integer inventoryQuantity;
+    private String status;
     @Size(max = 50, message = "Serial phai nho hon 50 ky tu")
     private String serial;
     private Integer warranty;
@@ -40,4 +42,5 @@ public class ProductDto {
     private String colors;
     private String images;
     private String attributes;
+    private String sizes;
 }

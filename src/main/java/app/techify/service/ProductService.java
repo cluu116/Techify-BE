@@ -34,12 +34,15 @@ public class ProductService {
     private final AttributeRepository attributeRepository;
     private final ObjectMapper objectMapper;
     private final ProductPromotionRepository productPromotionRepository;
+    private final SizeRepository sizeRepository;
 
     public void createProduct(ProductDto productDto) {
         Color color = colorRepository.save(Color.builder().colorJson(productDto.getColors()).build());
+        Size size = sizeRepository.save(Size.builder().sizeJson(productDto.getSizes()).build());
         Image image = imageRepository.save(Image.builder().imageJson(productDto.getImages()).build());
         Attribute attribute = attributeRepository.save(Attribute.builder().attributeJson(productDto.getAttributes()).build());
-        Product product = Product.builder()
+
+        Product.ProductBuilder productBuilder = Product.builder()
                 .id(productDto.getProductId())
                 .category(Category.builder().id(productDto.getCategory()).build())
                 .name(productDto.getName())
@@ -48,6 +51,7 @@ public class ProductService {
                 .origin(productDto.getOrigin())
                 .unit(productDto.getUnit())
                 .serial(productDto.getSerial())
+                .inventoryQuantity(productDto.getInventoryQuantity())
                 .warranty(productDto.getWarranty())
                 .buyPrice(productDto.getBuyPrice())
                 .sellPrice(productDto.getSellPrice())
@@ -55,9 +59,17 @@ public class ProductService {
                 .description(productDto.getDescription())
                 .color(color)
                 .image(image)
+                .size(size)
                 .attribute(attribute)
-                .createdAt(Instant.now())
-                .build();
+                .createdAt(Instant.now());
+
+        switch (productDto.getStatus()) {
+            case "active" -> productBuilder.status((short) 1);
+            case "comingSoon" -> productBuilder.status((short) 4);
+            case null, default -> productBuilder.status((short) 0);
+        }
+
+        Product product = productBuilder.build();
         productRepository.save(product);
     }
 
@@ -116,6 +128,7 @@ public class ProductService {
         dto.setUnit(product.getUnit());
         dto.setSellPrice(product.getSellPrice());
         dto.setColors(Optional.ofNullable(product.getColor()).map(Color::getColorJson).orElse(null));
+        dto.setSizes(Optional.ofNullable(product.getSize()).map(Size::getSizeJson).orElse(null));
         dto.setDescription(product.getDescription());
         dto.setSerial(product.getSerial());
         dto.setWarranty(product.getWarranty());
@@ -127,6 +140,18 @@ public class ProductService {
         // Calculate promotion price
         BigDecimal promotionPrice = calculatePromotionPrice(product.getId(), product.getSellPrice());
         dto.setPromotionPrice(promotionPrice);
+        dto.setInventoryQuantity(product.getInventoryQuantity());
+        if(product.getStatus()==1){
+            dto.setStatus("Còn hàng");
+        }else if(product.getStatus()==2){
+            dto.setStatus("Hết hàng");
+        }else if(product.getStatus()==3){
+            dto.setStatus("Ngừng sản xuất");
+        }else if(product.getStatus()==4){
+            dto.setStatus("Sắp ra mắt");
+        }else {
+            dto.setStatus("Đang cập nhật");
+        }
         if (promotionPrice.compareTo(product.getSellPrice()) < 0) {
             dto.setPromotionEndDate(getEarliestPromotionEndDate(product.getId()));
 
@@ -144,7 +169,6 @@ public class ProductService {
                 dto.setFormattedDiscount(formattedDiscount);
             }
         }
-
         return dto;
     }
 
@@ -300,11 +324,31 @@ public class ProductService {
                 product.getCategory().getId(), productId);
 
         return relatedProducts.stream()
-                .filter(p -> p.getBrand().equals(product.getBrand()) ||
-                        (p.getAttribute() != null && product.getAttribute() != null &&
-                                p.getAttribute().getAttributeJson().equals(product.getAttribute().getAttributeJson())))
+                .sorted((p1, p2) -> {
+                    if (isSameBrandAndAttribute(p1, product) && isSameBrandAndAttribute(p2, product)) {
+                        return 0;
+                    } else if (isSameBrandAndAttribute(p1, product)) {
+                        return -1;
+                    } else if (isSameBrandAndAttribute(p2, product)) {
+                        return 1;
+                    }
+                    if (p1.getBrand().equals(product.getBrand()) && p2.getBrand().equals(product.getBrand())) {
+                        return 0;
+                    } else if (p1.getBrand().equals(product.getBrand())) {
+                        return -1;
+                    } else if (p2.getBrand().equals(product.getBrand())) {
+                        return 1;
+                    }
+                    return 0;
+                })
                 .limit(limit)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private boolean isSameBrandAndAttribute(Product p1, Product p2) {
+        return p1.getBrand().equals(p2.getBrand()) &&
+                p1.getAttribute() != null && p2.getAttribute() != null &&
+                p1.getAttribute().getAttributeJson().equals(p2.getAttribute().getAttributeJson());
     }
 }

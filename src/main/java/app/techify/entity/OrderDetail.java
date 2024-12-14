@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 @Table(name = "order_detail")
 public class OrderDetail {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Integer id;
 
@@ -42,5 +43,10 @@ public class OrderDetail {
     @NotNull
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
+
+    @Size(max = 50)
+    @Nationalized
+    @Column(name = "size", length = 50)
+    private String size;
 
 }

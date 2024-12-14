@@ -3,8 +3,10 @@ package app.techify.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
@@ -98,6 +100,19 @@ public class Product {
     @OneToMany(mappedBy = "product")
     @JsonManagedReference
     private Set<Review> reviews = new LinkedHashSet<>();
+
+    @NotNull
+    @ColumnDefault("0")
+    @Column(name = "inventory_quantity", nullable = false)
+    private Integer inventoryQuantity;
+
+    @ColumnDefault("1")
+    @Column(name = "status", columnDefinition = "tinyint not null")
+    private Short status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "size_id")
+    private app.techify.entity.Size size;
 
     public int getTotalSoldQuantity() {
         return orderDetails.stream()

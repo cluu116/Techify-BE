@@ -11,6 +11,8 @@ import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
+import java.math.BigDecimal;
+
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -46,5 +48,10 @@ public class TransportVendor {
     @ColumnDefault("1")
     @Column(name = "status", nullable = false)
     private Boolean status = false;
+
+    @NotNull
+    @ColumnDefault("0")
+    @Column(name = "base_price", nullable = false)
+    private BigDecimal basePrice;
 
 }
