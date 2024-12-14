@@ -94,7 +94,9 @@ public class OrderService {
         // Calculate total and discount
         BigDecimal total = calculateOrderTotal(order);
         response.setTotal(total);
-        
+        response.setShipPrice(order.getTransportVendor() != null ?
+                order.getTransportVendor().getBasePrice() : BigDecimal.ZERO);
+
         if (order.getVoucher() != null) {
             BigDecimal discountValue = calculateDiscountValue(order.getVoucher(), total);
             response.setDisCountValue(discountValue);
@@ -104,9 +106,14 @@ public class OrderService {
     }
 
     private BigDecimal calculateOrderTotal(Order order) {
-        return orderDetailRepository.findByOrderId(order.getId()).stream()
+        BigDecimal tongGiaTriSanPham = orderDetailRepository.findByOrderId(order.getId()).stream()
                 .map(detail -> detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal phiVanChuyen = order.getTransportVendor() != null ?
+                order.getTransportVendor().getBasePrice() : BigDecimal.ZERO;
+
+        return tongGiaTriSanPham.add(phiVanChuyen);
     }
 
     private BigDecimal calculateDiscountValue(Voucher voucher, BigDecimal total) {

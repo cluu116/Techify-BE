@@ -21,5 +21,6 @@ public class OrderResponse {
     private String createdAt;
     private String updatedAt;
     private BigDecimal disCountValue;
+    private BigDecimal shipPrice;
     private BigDecimal total;
 }
