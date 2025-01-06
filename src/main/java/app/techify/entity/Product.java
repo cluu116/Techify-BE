@@ -114,6 +114,11 @@ public class Product {
     @JoinColumn(name = "size_id")
     private app.techify.entity.Size size;
 
+    @NotNull
+    @ColumnDefault("0")
+    @Column(name = "available_quantity", nullable = false)
+    private Integer availableQuantity;
+
     public int getTotalSoldQuantity() {
         return orderDetails.stream()
                 .mapToInt(OrderDetail::getQuantity)

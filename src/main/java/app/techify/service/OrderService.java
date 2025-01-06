@@ -146,4 +146,11 @@ public class OrderService {
         Order updatedOrder = orderRepository.save(existingOrder);
         return convertToOrderResponse(updatedOrder);
     }
+
+    public List<OrderResponse> getOrdersByCustomerId(String customerId) {
+        List<Order> orders = orderRepository.findByCustomerId(customerId);
+        return orders.stream()
+                .map(this::convertToOrderResponse)
+                .collect(Collectors.toList());
+    }
 }

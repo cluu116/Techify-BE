@@ -34,17 +34,21 @@ public class VoucherService {
         if (!voucherRepository.existsById(voucher.getId())) {
             throw new RuntimeException("Voucher not found with id: " + voucher.getId());
         }
-        
+
         validateVoucherDates(voucher);
         validateDiscountValues(voucher);
         return voucherRepository.save(voucher);
     }
 
     public void deleteVoucher(String id) {
-        if (!voucherRepository.existsById(id)) {
+        if (!checkVoucherExists(id)) {
             throw new RuntimeException("Voucher not found with id: " + id);
         }
         voucherRepository.deleteById(id);
+    }
+
+    public boolean checkVoucherExists(String id) {
+        return voucherRepository.existsById(id);
     }
 
     private void validateVoucherDates(Voucher voucher) {

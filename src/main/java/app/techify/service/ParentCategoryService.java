@@ -22,6 +22,7 @@ public class ParentCategoryService {
     public void createParentCategory(ParentCategoryDto parentCategoryDto) {
         ParentCategory parentCategory = ParentCategory.builder()
                 .name(parentCategoryDto.getName())
+                .thumbnail(parentCategoryDto.getThumbnail())
                 .build();
         parentCategoryRepository.save(parentCategory);
     }
@@ -29,7 +30,12 @@ public class ParentCategoryService {
     public void updateParentCategory(Integer id, ParentCategoryDto parentCategoryDto) {
         ParentCategory parentCategory = parentCategoryRepository.findById(id).orElseThrow();
         parentCategory.setName(parentCategoryDto.getName());
+        parentCategory.setThumbnail(parentCategoryDto.getThumbnail());
         parentCategoryRepository.save(parentCategory);
+    }
+
+    public ParentCategory getParentCategoryById(Integer id) {
+        return parentCategoryRepository.findById(id).orElse(null);
     }
 
     public void deleteParentCategory(Integer id) {

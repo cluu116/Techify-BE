@@ -2,6 +2,7 @@ package app.techify.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
 
@@ -24,5 +25,10 @@ public class ParentCategory {
     @Nationalized
     @Column(name = "name", nullable = false, length = 50)
     private String name;
+
+    @Size(max = 255)
+    @Nationalized
+    @Column(name = "thumbnail")
+    private String thumbnail;
 
 }

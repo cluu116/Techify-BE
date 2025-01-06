@@ -21,7 +21,7 @@ public class GetProductDto {
     private BigDecimal sellPrice;
     private BigDecimal promotionPrice;
     private Integer reviewCount;
-    private Integer avgRating;
+    private Double avgRating;
     private String colors;
     private String sizes;
     private String images;
@@ -29,6 +29,7 @@ public class GetProductDto {
     private Instant promotionEndDate;
     private String formattedDiscount;
     private Integer inventoryQuantity;
+    private Integer availableQuantity;
     private String status;
     private Instant createdAt;
 }

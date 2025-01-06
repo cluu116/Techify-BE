@@ -9,4 +9,5 @@ public class ParentCategoryDto {
     @Size(max = 50, min = 2, message = "Ten phai trong khoang tu 2 den 50 ky tu")
     @NotBlank(message = "Ten khong duoc de trong")
     private String name;
+    private String thumbnail;
 }

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 
@@ -71,14 +72,14 @@ public class ProductController {
     public ResponseEntity<Page<GetProductDto>> getProductsByCategory(
             @PathVariable Integer categoryId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "4") int size,
+            @RequestParam(defaultValue = "9") int size,
             @RequestParam(required = false) String brands,
-            @RequestParam(required = false) String attributes
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice
     ) {
         try {
             List<String> brandList = brands != null ? Arrays.asList(brands.split(",")) : null;
-            List<String> attributeList = attributes != null ? Arrays.asList(attributes.split(",")) : null;
-            Page<GetProductDto> products = productService.getProductsByCategory(categoryId, page, size, brandList, attributeList);
+            Page<GetProductDto> products = productService.getProductsByCategory(categoryId, page, size, brandList, minPrice, maxPrice);
             return ResponseEntity.ok(products);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
@@ -127,5 +128,73 @@ public class ProductController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+    @GetMapping("/search")
+    public ResponseEntity<Page<GetProductDto>> searchProducts(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<GetProductDto> results = productService.searchProducts(keyword, page, size);
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<Page<GetProductDto>> filterProducts(
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) List<String> brands,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<GetProductDto> results = productService.filterProducts(categoryId, brands,
+                minPrice, maxPrice,
+                sortBy, sortDirection, page, size);
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/top-rated")
+    public ResponseEntity<List<GetProductDto>> getTopRatedProducts() {
+        try {
+            List<GetProductDto> topRatedProducts = productService.getTopRatedProducts(4);
+            return ResponseEntity.ok(topRatedProducts);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+    @PutMapping("/AvailableQuantity/{id}")
+    public ResponseEntity<?> updateAvailableQuantity(
+            @PathVariable String id,
+            @RequestParam int quantity) {
+        try {
+            productService.updateAvailableQuantity(id, quantity);
+            return ResponseEntity.ok().body("Product quantity updated successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating product quantity");
+        }
+    }
+
+    @PutMapping("/InventoryQuantity/{id}")
+    public ResponseEntity<?> updateInventoryQuantity(
+            @PathVariable String id,
+            @RequestParam int quantity) {
+        try {
+            productService.updateInventoryQuantity(id, quantity);
+            return ResponseEntity.ok().body("Product quantity updated successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating product quantity");
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Void> updateProductStatus(@PathVariable String id, @RequestParam Short status) {
+        productService.updateProductStatus(id, status);
+        return ResponseEntity.ok().build();
     }
 }

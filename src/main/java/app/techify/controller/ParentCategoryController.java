@@ -22,6 +22,16 @@ public class ParentCategoryController {
         return ResponseEntity.ok(parentCategoryService.getParentCategories());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ParentCategory> getParentCategoryById(@PathVariable Integer id) {
+        ParentCategory parentCategory = parentCategoryService.getParentCategoryById(id);
+        if (parentCategory != null) {
+            return ResponseEntity.ok(parentCategory);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PostMapping("")
     public ResponseEntity<String> createParentCategory(@Valid @ModelAttribute ParentCategoryDto parentCategoryDto) {
         parentCategoryService.createParentCategory(parentCategoryDto);
@@ -29,7 +39,7 @@ public class ParentCategoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateParentCategory(@PathVariable Integer id, @Valid @RequestBody ParentCategoryDto parentCategoryDto) {
+    public ResponseEntity<String> updateParentCategory(@PathVariable Integer id, @Valid @ModelAttribute ParentCategoryDto parentCategoryDto) {
         parentCategoryService.updateParentCategory(id, parentCategoryDto);
         return ResponseEntity.ok("Updated");
     }

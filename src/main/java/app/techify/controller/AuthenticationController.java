@@ -1,6 +1,7 @@
 package app.techify.controller;
 
 import app.techify.dto.AuthResponse;
+import app.techify.dto.ChangePasswordRequest;
 import app.techify.dto.LoginRequest;
 import app.techify.dto.RefreshTokenRequest;
 import app.techify.entity.Account;
@@ -18,6 +19,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -39,6 +41,7 @@ public class AuthenticationController {
     private final CustomerService customerService;
     private final GoogleAuthService googleAuthService;
     private final FacebookAuthService facebookAuthService;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@RequestParam String email, @RequestParam String passwordHash, @RequestParam String fullName) {
@@ -77,6 +80,29 @@ public class AuthenticationController {
         } catch (Exception e) {
             System.out.println("Authentication failed: " + e.getMessage());
             return ResponseEntity.badRequest().body("Authentication failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getCurrentPassword()));
+
+            if (authentication.isAuthenticated()) {
+                Account account = accountRepository.findByEmail(request.getEmail())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+
+                String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+                account.setPasswordHash(encodedPassword);
+                accountRepository.save(account);
+
+                return ResponseEntity.ok("Mật khẩu đã được thay đổi thành công");
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Mật khẩu hiện tại không đúng");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Mật khẩu hiện tại không đúng");
         }
     }
 

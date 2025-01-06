@@ -42,4 +42,9 @@ public class VoucherController {
         voucherService.deleteVoucher(id);
         return ResponseEntity.ok().build();
     }
+    @GetMapping("/check/{id}")
+    public ResponseEntity<Boolean> checkVoucherExists(@PathVariable String id) {
+        boolean exists = voucherService.checkVoucherExists(id);
+        return ResponseEntity.ok(exists);
+    }
 } 

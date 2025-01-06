@@ -6,12 +6,14 @@ import app.techify.entity.*;
 import app.techify.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,6 +54,7 @@ public class ProductService {
                 .unit(productDto.getUnit())
                 .serial(productDto.getSerial())
                 .inventoryQuantity(productDto.getInventoryQuantity())
+                .availableQuantity(productDto.getInventoryQuantity())
                 .warranty(productDto.getWarranty())
                 .buyPrice(productDto.getBuyPrice())
                 .sellPrice(productDto.getSellPrice())
@@ -90,6 +93,8 @@ public class ProductService {
         productToUpdate.setSellPrice(product.getSellPrice());
         productToUpdate.setTax(product.getTax());
         productToUpdate.setDescription(product.getDescription());
+        productToUpdate.setInventoryQuantity(product.getInventoryQuantity());
+        productToUpdate.setAvailableQuantity(product.getAvailableQuantity());
 
         // Update related entities if they exist
         if (product.getColor() != null) {
@@ -103,6 +108,10 @@ public class ProductService {
         if (product.getAttribute() != null) {
             Attribute attribute = attributeRepository.save(product.getAttribute());
             productToUpdate.setAttribute(attribute);
+        }
+        if (product.getSize() != null) {
+            Size size = sizeRepository.save(product.getSize());
+            productToUpdate.setSize(size);
         }
 
         productRepository.save(productToUpdate);
@@ -141,15 +150,20 @@ public class ProductService {
         BigDecimal promotionPrice = calculatePromotionPrice(product.getId(), product.getSellPrice());
         dto.setPromotionPrice(promotionPrice);
         dto.setInventoryQuantity(product.getInventoryQuantity());
-        if(product.getStatus()==1){
-            dto.setStatus("Còn hàng");
-        }else if(product.getStatus()==2){
+        dto.setAvailableQuantity(product.getAvailableQuantity());
+        if (product.getStatus() == 1) {
+            if (product.getAvailableQuantity() <= 0) {
+                dto.setStatus("Hết hàng");
+            } else {
+                dto.setStatus("Còn hàng");
+            }
+        } else if (product.getStatus() == 2) {
             dto.setStatus("Hết hàng");
-        }else if(product.getStatus()==3){
+        } else if (product.getStatus() == 3) {
             dto.setStatus("Ngừng sản xuất");
-        }else if(product.getStatus()==4){
+        } else if (product.getStatus() == 4) {
             dto.setStatus("Sắp ra mắt");
-        }else {
+        } else {
             dto.setStatus("Đang cập nhật");
         }
         if (promotionPrice.compareTo(product.getSellPrice()) < 0) {
@@ -172,20 +186,15 @@ public class ProductService {
         return dto;
     }
 
-    private int calculateAverageRating(Set<Review> reviews) {
+    private double calculateAverageRating(Set<Review> reviews) {
         if (reviews == null || reviews.isEmpty()) {
-            return 0;
+            return 0.0;
         }
 
-        double avgRating = reviews.stream()
-                .mapToInt(review -> review.getRating().intValue())
+        return reviews.stream()
+                .mapToDouble(review -> review.getRating().doubleValue())
                 .average()
                 .orElse(0.0);
-
-        // Custom rounding logic:
-        // If decimal part < 0.5, round down
-        // If decimal part >= 0.5, round up
-        return (int) Math.round(avgRating);
     }
 
     private BigDecimal calculatePromotionPrice(String productId, BigDecimal sellPrice) {
@@ -197,12 +206,10 @@ public class ProductService {
             if (isPromotionActive(promotion)) {
                 BigDecimal discountedPrice;
                 if (promotion.getDiscountType()) {
-                    // Percentage discount
                     BigDecimal discountFactor = BigDecimal.ONE.subtract(
                             BigDecimal.valueOf(promotion.getDiscountValue()).divide(BigDecimal.valueOf(100)));
                     discountedPrice = sellPrice.multiply(discountFactor);
                 } else {
-                    // Fixed amount discount
                     discountedPrice = sellPrice.subtract(BigDecimal.valueOf(promotion.getDiscountValue()));
                 }
                 discountedPrice = discountedPrice.max(BigDecimal.ZERO);
@@ -213,6 +220,7 @@ public class ProductService {
         }
         return lowestPrice;
     }
+
     private ProductPromotion getActivePromotion(String productId) {
         List<ProductPromotion> productPromotions = productPromotionRepository.findByProductIdWithPromotion(productId);
         return productPromotions.stream()
@@ -220,6 +228,7 @@ public class ProductService {
                 .findFirst()
                 .orElse(null);
     }
+
     private boolean isPromotionActive(Promotion promotion) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate = LocalDateTime.ofInstant(promotion.getStartDate(), ZoneId.systemDefault());
@@ -234,20 +243,52 @@ public class ProductService {
         return convertToDTO(product);
     }
 
-    public Page<GetProductDto> getProductsByCategory(Integer categoryId, int page, int size, List<String> brands, List<String> attributes) {
-        List<Product> products = productRepository.findAllByCategoryIdWithDetails(categoryId);
-        if (brands != null && !brands.isEmpty()) {
-            products = products.stream()
-                    .filter(product -> brands.contains(product.getBrand()))
-                    .toList();
-        }
-        if (attributes != null && !attributes.isEmpty()) {
-            products = products.stream()
-                    .filter(product -> attributes.contains(product.getAttribute().getAttributeJson()))
-                    .toList();
-        }
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Product> productsPage = new PageImpl<>(products, pageable, products.size());
+    public Page<GetProductDto> getProductsByCategory(Integer categoryId, int page, int size, List<String> brands, BigDecimal minPrice, BigDecimal maxPrice) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        // Sử dụng Specification để xây dựng truy vấn động
+        Specification<Product> spec = Specification.where((root, query, cb) -> {
+            Predicate predicate = cb.equal(root.get("category").get("id"), categoryId);
+
+            if (brands != null && !brands.isEmpty()) {
+                predicate = cb.and(predicate, root.get("brand").in(brands));
+            }
+
+            if (minPrice != null || maxPrice != null) {
+                Join<Product, ProductPromotion> promotionJoin = root.join("productPromotions", JoinType.LEFT);
+                Join<ProductPromotion, Promotion> promotion = promotionJoin.join("promotion", JoinType.LEFT);
+
+                Expression<BigDecimal> price = cb.function("LEAST", BigDecimal.class,
+                        root.get("sellPrice"),
+                        cb.selectCase()
+                                .when(cb.and(
+                                        cb.isTrue(promotion.get("discountType")),
+                                        cb.greaterThan(promotion.get("endDate"), cb.currentTimestamp()),
+                                        cb.lessThan(promotion.get("startDate"), cb.currentTimestamp())
+                                ), cb.prod(root.get("sellPrice"), cb.diff(1, cb.quot(promotion.get("discountValue"), 100))))
+                                .when(cb.and(
+                                        cb.isFalse(promotion.get("discountType")),
+                                        cb.greaterThan(promotion.get("endDate"), cb.currentTimestamp()),
+                                        cb.lessThan(promotion.get("startDate"), cb.currentTimestamp())
+                                ), cb.diff(root.get("sellPrice"), promotion.get("discountValue")))
+                                .otherwise(root.get("sellPrice"))
+                );
+
+                if (minPrice != null) {
+                    predicate = cb.and(predicate, cb.greaterThanOrEqualTo(price, minPrice));
+                }
+                if (maxPrice != null) {
+                    predicate = cb.and(predicate, cb.lessThanOrEqualTo(price, maxPrice));
+                }
+            }
+
+            return predicate;
+        });
+
+        // Thực hiện truy vấn với Specification
+        Page<Product> productsPage = productRepository.findAll(spec, pageable);
+
+        // Chuyển đổi kết quả sang DTO
         return productsPage.map(this::convertToDTO);
     }
 
@@ -278,7 +319,7 @@ public class ProductService {
         List<Product> products = productRepository.findAllWithDetails();
         return products.stream()
                 .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // Sort by creation date, newest first
-                .limit(4) // Get only 4 products
+                .limit(4)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -350,5 +391,64 @@ public class ProductService {
         return p1.getBrand().equals(p2.getBrand()) &&
                 p1.getAttribute() != null && p2.getAttribute() != null &&
                 p1.getAttribute().getAttributeJson().equals(p2.getAttribute().getAttributeJson());
+    }
+
+    public Page<GetProductDto> searchProducts(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepository.searchProducts(keyword, pageable);
+        return productPage.map(this::convertToDTO);
+    }
+
+    public Page<GetProductDto> filterProducts(Integer categoryId, List<String> brands,
+                                              BigDecimal minPrice, BigDecimal maxPrice,
+                                              String sortBy, String sortDirection, int page, int size) {
+        Pageable pageable = createPageable(page, size, sortBy, sortDirection);
+        Page<Product> productPage = productRepository.filterProducts(categoryId, brands, minPrice, maxPrice, pageable);
+        return productPage.map(this::convertToDTO);
+    }
+
+    private Pageable createPageable(int page, int size, String sortBy, String sortDirection) {
+        Sort sort = Sort.by(sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy);
+        return PageRequest.of(page, size, sort);
+    }
+
+    public List<GetProductDto> getTopRatedProducts(int limit) {
+        List<Product> allProducts = productRepository.findAllWithDetails();
+
+        return allProducts.stream()
+                .filter(product -> !product.getReviews().isEmpty())
+                .sorted((p1, p2) -> Double.compare(calculateAverageRating(p2.getReviews()), calculateAverageRating(p1.getReviews())))
+                .limit(limit)
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public void updateAvailableQuantity(String id, int quantity) {
+        Product productToUpdate = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+
+        productToUpdate.setAvailableQuantity(quantity);
+
+        productRepository.save(productToUpdate);
+    }
+
+    public void updateInventoryQuantity(String id, int quantity) {
+        Product productToUpdate = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+
+        productToUpdate.setInventoryQuantity(quantity);
+
+        productRepository.save(productToUpdate);
+    }
+
+    public void updateProductStatus(String id, Short status) {
+        Product productToUpdate = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        productToUpdate.setStatus(status);
+        if (status == 2) {
+            productToUpdate.setAvailableQuantity(0);
+        }
+
+        productRepository.save(productToUpdate);
     }
 }

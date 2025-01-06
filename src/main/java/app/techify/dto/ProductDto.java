@@ -28,6 +28,7 @@ public class ProductDto {
     @NotBlank(message = "Don vi tinh khong duoc de trong")
     private String unit;
     private Integer inventoryQuantity;
+    private Integer availableQuantity;
     private String status;
     @Size(max = 50, message = "Serial phai nho hon 50 ky tu")
     private String serial;
