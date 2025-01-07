@@ -1,9 +1,6 @@
 package app.techify.controller;
 
-import app.techify.dto.AuthResponse;
-import app.techify.dto.ChangePasswordRequest;
-import app.techify.dto.LoginRequest;
-import app.techify.dto.RefreshTokenRequest;
+import app.techify.dto.*;
 import app.techify.entity.Account;
 import app.techify.entity.Customer;
 import app.techify.repository.AccountRepository;
@@ -18,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -267,6 +265,27 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(errorUri)
                     .build();
+        }
+    }
+
+    @PutMapping("/update-Image")
+    public ResponseEntity<?> updateAccount(@RequestBody AccountUpdateRequest updateRequest) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserEmail = authentication.getName();
+
+            Account account = accountRepository.findByEmail(currentUserEmail)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+
+            if (updateRequest.getAvatar() != null && !updateRequest.getAvatar().isEmpty()) {
+                account.setAvatar(updateRequest.getAvatar());
+            }
+
+            Account updatedAccount = accountRepository.save(account);
+
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Cập nhật ảnh đại diện thất bại: " + e.getMessage());
         }
     }
 }

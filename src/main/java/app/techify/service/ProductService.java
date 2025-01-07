@@ -57,7 +57,7 @@ public class ProductService {
                 .availableQuantity(productDto.getInventoryQuantity())
                 .warranty(productDto.getWarranty())
                 .buyPrice(productDto.getBuyPrice())
-                .sellPrice(productDto.getSellPrice())
+                .sellPrice(productDto.getSellPrice().add(productDto.getSellPrice().multiply(BigDecimal.valueOf(productDto.getTax()).divide(BigDecimal.valueOf(100)))))
                 .tax(productDto.getTax())
                 .description(productDto.getDescription())
                 .color(color)
