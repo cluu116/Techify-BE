@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -46,5 +47,10 @@ public class VoucherController {
     public ResponseEntity<Boolean> checkVoucherExists(@PathVariable String id) {
         boolean exists = voucherService.checkVoucherExists(id);
         return ResponseEntity.ok(exists);
+    }
+    @PostMapping("/apply")
+    public ResponseEntity<String> applyVoucher(@RequestParam String voucherId, @RequestParam BigDecimal orderTotal) {
+        String result = voucherService.applyVoucher(voucherId, orderTotal);
+        return ResponseEntity.ok(result);
     }
 } 

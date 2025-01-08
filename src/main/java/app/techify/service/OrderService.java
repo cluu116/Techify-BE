@@ -81,8 +81,7 @@ public class OrderService {
         response.setStaffName(order.getStaff() != null ? order.getStaff().getFullName() : null);
         response.setPaymentMethodName(order.getPaymentMethod() != null ? order.getPaymentMethod().getName() : null);
         response.setTransportVendorName(order.getTransportVendor() != null ? order.getTransportVendor().getName() : null);
-        response.setVoucherCode(order.getVoucher() != null ? order.getVoucher().getId() : null);
-        
+
         response.setShippingAddress(order.getShippingAddress());
         response.setStatus(order.getStatus());
         
@@ -90,18 +89,25 @@ public class OrderService {
                 .withZone(ZoneId.systemDefault());
         response.setCreatedAt(order.getCreatedAt() != null ? formatter.format(order.getCreatedAt()) : null);
         response.setUpdatedAt(order.getUpdatedAt() != null ? formatter.format(order.getUpdatedAt()) : null);
-        
-        // Calculate total and discount
-        BigDecimal total = calculateOrderTotal(order);
-        response.setTotal(total);
-        response.setShipPrice(order.getTransportVendor() != null ?
-                order.getTransportVendor().getBasePrice() : BigDecimal.ZERO);
 
+        BigDecimal orderTotal = calculateOrderTotal(order);
+
+        // Get shipping price
+        BigDecimal shippingPrice = order.getTransportVendor() != null ?
+                order.getTransportVendor().getBasePrice() : BigDecimal.ZERO;
+
+        // Calculate discount
+        BigDecimal discountValue = BigDecimal.ZERO;
         if (order.getVoucher() != null) {
-            BigDecimal discountValue = calculateDiscountValue(order.getVoucher(), total);
-            response.setDisCountValue(discountValue);
+            discountValue = calculateDiscountValue(order.getVoucher(), orderTotal.subtract(shippingPrice));
         }
-        
+
+        BigDecimal finalTotal = orderTotal.subtract(discountValue);
+
+        response.setShipPrice(shippingPrice);
+        response.setDisCountValue(discountValue);
+        response.setTotal(finalTotal);
+
         return response;
     }
 
@@ -120,20 +126,20 @@ public class OrderService {
         if (total.compareTo(voucher.getMinOrder()) < 0) {
             return BigDecimal.ZERO;
         }
-        
+
         BigDecimal discountAmount;
         if (voucher.getDiscountType()) {
-            // Percentage discount
-            discountAmount = total.multiply(BigDecimal.valueOf(voucher.getDiscountValue() / 100));
-            if (voucher.getMaxDiscount() != null) {
-                discountAmount = discountAmount.min(voucher.getMaxDiscount());
-            }
+
+            discountAmount = total.multiply(BigDecimal.valueOf(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100)));
         } else {
-            // Fixed amount discount
             discountAmount = BigDecimal.valueOf(voucher.getDiscountValue());
         }
-        
-        return discountAmount;
+
+        if (voucher.getMaxDiscount() != null) {
+            discountAmount = discountAmount.min(voucher.getMaxDiscount());
+        }
+
+        return discountAmount.min(total);
     }
 
     public OrderResponse updateOrderStatus(String id, Short status) {

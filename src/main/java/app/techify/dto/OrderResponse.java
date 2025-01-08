@@ -15,7 +15,6 @@ public class OrderResponse {
     private String staffName;
     private String paymentMethodName;
     private String transportVendorName;
-    private String voucherCode;
     private String shippingAddress;
     private Short status;
     private String createdAt;

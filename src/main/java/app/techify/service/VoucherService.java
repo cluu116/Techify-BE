@@ -1,10 +1,13 @@
 package app.techify.service;
 
+import app.techify.dto.VoucherValidationResult;
 import app.techify.entity.Voucher;
 import app.techify.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
@@ -76,6 +79,50 @@ public class VoucherService {
 
         if (voucher.getMinOrder().compareTo(java.math.BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Minimum order amount must be greater than 0");
+        }
+    }
+
+    public String applyVoucher(String voucherId, BigDecimal orderTotal) {
+        try {
+            Voucher voucher = voucherRepository.findById(voucherId)
+                    .orElseThrow(() -> new RuntimeException("Voucher không tồn tại: " + voucherId));
+
+            Instant now = Instant.now();
+
+            if (now.isBefore(voucher.getStartDate())) {
+                return "Voucher chưa có hiệu lực";
+            }
+
+            if (now.isAfter(voucher.getEndDate())) {
+                return "Voucher đã hết hạn";
+            }
+
+            if (voucher.getUsageLimit() != null && voucher.getUsageLimit() <= 0) {
+                return "Voucher đã hết lượt sử dụng";
+            }
+
+            if (orderTotal.compareTo(voucher.getMinOrder()) < 0) {
+                return "Giá trị đơn hàng chưa đạt mức tối thiểu để sử dụng voucher";
+            }
+
+            BigDecimal discountAmount;
+            if (voucher.getDiscountType()) {
+                discountAmount = orderTotal.multiply(BigDecimal.valueOf(voucher.getDiscountValue() / 100));
+            } else {
+                discountAmount = BigDecimal.valueOf(voucher.getDiscountValue());
+            }
+
+            if (voucher.getMaxDiscount() != null && discountAmount.compareTo(voucher.getMaxDiscount()) > 0) {
+                discountAmount = voucher.getMaxDiscount();
+            }
+
+            if (discountAmount.compareTo(orderTotal) > 0) {
+                discountAmount = orderTotal;
+            }
+
+            return discountAmount.setScale(2, RoundingMode.HALF_UP).toString();
+        } catch (Exception e) {
+            return e.getMessage();
         }
     }
 } 
