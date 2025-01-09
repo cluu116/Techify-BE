@@ -14,8 +14,6 @@ public class CustomerDto {
 
     private String phone;
 
-    private String altPhone;
-
     private String province;
 
     private String district;
@@ -23,6 +21,4 @@ public class CustomerDto {
     private String ward;
 
     private String address;
-
-    private String altAddress;
 }

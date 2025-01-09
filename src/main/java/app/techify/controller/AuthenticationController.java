@@ -42,10 +42,14 @@ public class AuthenticationController {
     private final BCryptPasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestParam String email, @RequestParam String passwordHash, @RequestParam String fullName) {
+    public ResponseEntity<?> register(@RequestParam String email, @RequestParam String passwordHash, @RequestParam String fullName) {
+        if (accountRepository.findByEmail(email).isPresent()) {
+            return ResponseEntity.badRequest().body("Email đã được sử dụng");
+        }
         Account newAccount = Account.builder()
                 .email(email)
                 .passwordHash(passwordHash)
+                .isDeleted(false)
                 .build();
         Account savedAccount = accountService.createAccount(newAccount);
         Customer newCustomer = Customer.builder()
@@ -64,9 +68,12 @@ public class AuthenticationController {
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPasswordHash()));
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            System.out.println("Authentication successful for user: " + userDetails.getUsername());
 
             Account account = accountRepository.findByEmail(userDetails.getUsername()).orElseThrow();
+
+            if (account.getIsDeleted()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Tài khoản này đã bị vô hiệu hóa.");
+            }
 
             String jwt = jwtService.generateToken(account.getEmail(), account.getRole());
             String refreshToken = jwtService.generateRefreshToken(account.getEmail(), account.getRole());
@@ -76,7 +83,6 @@ public class AuthenticationController {
 
             return ResponseEntity.ok(new AuthResponse(jwt, refreshToken));
         } catch (Exception e) {
-            System.out.println("Authentication failed: " + e.getMessage());
             return ResponseEntity.badRequest().body("Authentication failed: " + e.getMessage());
         }
     }
@@ -158,17 +164,25 @@ public class AuthenticationController {
             Account account = accountRepository.findByGoogleId(googleId)
                     .orElse(accountRepository.findByEmail(email).orElse(null));
 
-            if (account == null) {
-                // Tạo tài khoản mới nếu chưa tồn tại
+            if (account != null) {
+                if (account.getIsDeleted()) {
+                    URI errorUri = UriComponentsBuilder.fromUriString("http://localhost:5173/google-auth-callback")
+                            .queryParam("error", "Tài khoản này đã bị vô hiệu hóa.")
+                            .build().toUri();
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .location(errorUri)
+                            .build();
+                }
+            } else {
                 account = Account.builder()
                         .email(email)
                         .googleId(googleId)
                         .role("CUSTOMER")
                         .avatar((String) userInfo.get("picture"))
+                        .isDeleted(false)
                         .build();
                 account = accountService.createAccount(account);
 
-                // Tạo hồ sơ khách hàng mới
                 Customer customer = Customer.builder()
                         .account(account)
                         .fullName((String) userInfo.get("name"))
@@ -226,13 +240,22 @@ public class AuthenticationController {
             Account account = accountRepository.findByFacebookId(facebookId)
                     .orElse(accountRepository.findByEmail(email).orElse(null));
 
-            if (account == null) {
-                // Tạo tài khoản mới nếu chưa tồn tại
+            if (account != null) {
+                if (account.getIsDeleted()) {
+                    URI errorUri = UriComponentsBuilder.fromUriString("http://localhost:5173/facebook-auth-callback")
+                            .queryParam("error", "Tài khoản này đã bị vô hiệu hóa.")
+                            .build().toUri();
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .location(errorUri)
+                            .build();
+                }
+            } else {
                 account = Account.builder()
                         .email(email)
                         .facebookId(facebookId)
                         .role("CUSTOMER")
                         .avatar((String) userInfo.get("picture.data.url"))
+                        .isDeleted(false)
                         .build();
                 account = accountService.createAccount(account);
 

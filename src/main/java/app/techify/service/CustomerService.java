@@ -32,9 +32,6 @@ public class CustomerService {
             if (updateDto.getPhone() != null) {
                 existingCustomer.setPhone(updateDto.getPhone());
             }
-            if (updateDto.getAltPhone() != null) {
-                existingCustomer.setAltPhone(updateDto.getAltPhone());
-            }
             if (updateDto.getProvince() != null) {
                 existingCustomer.setProvince(updateDto.getProvince());
             }
@@ -46,9 +43,6 @@ public class CustomerService {
             }
             if (updateDto.getAddress() != null) {
                 existingCustomer.setAddress(updateDto.getAddress());
-            }
-            if (updateDto.getAltAddress() != null) {
-                existingCustomer.setAltAddress(updateDto.getAltAddress());
             }
 
             return customerRepository.save(existingCustomer);

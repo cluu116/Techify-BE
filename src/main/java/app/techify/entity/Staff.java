@@ -63,4 +63,19 @@ public class Staff {
     @OneToMany(mappedBy = "staff")
     private Set<Order> orders = new LinkedHashSet<>();
 
+    @Size(max = 50)
+    @Nationalized
+    @Column(name = "province", length = 50)
+    private String province;
+
+    @Size(max = 50)
+    @Nationalized
+    @Column(name = "district", length = 50)
+    private String district;
+
+    @Size(max = 50)
+    @Nationalized
+    @Column(name = "ward", length = 50)
+    private String ward;
+
 }

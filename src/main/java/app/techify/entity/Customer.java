@@ -41,11 +41,6 @@ public class Customer {
     @Column(name = "phone", length = 20)
     private String phone;
 
-    @Size(max = 20)
-    @Nationalized
-    @Column(name = "alt_phone", length = 20)
-    private String altPhone;
-
     @Size(max = 50)
     @Nationalized
     @Column(name = "province", length = 50)
@@ -65,11 +60,6 @@ public class Customer {
     @Nationalized
     @Column(name = "address")
     private String address;
-
-    @Size(max = 255)
-    @Nationalized
-    @Column(name = "alt_address")
-    private String altAddress;
 
     @OneToMany(mappedBy = "customer")
     private Set<Order> orders = new LinkedHashSet<>();
