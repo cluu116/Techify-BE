@@ -100,7 +100,7 @@ public class ProductController {
 
     @GetMapping("/top-selling")
     public ResponseEntity<List<GetProductDto>> getTopSellingProducts() {
-        return ResponseEntity.ok(productService.getTopSellingProducts(4));
+        return ResponseEntity.ok(productService.getTopSellingProducts(8));
     }
 
     @GetMapping("/brands/{categoryId}")

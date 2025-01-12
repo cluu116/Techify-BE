@@ -26,6 +26,7 @@ public class PromotionService {
     public Promotion createPromotion(Promotion promotion) {
         validatePromotionDates(promotion);
         validateDiscountValues(promotion);
+        promotion.setIsDeleted(false);
         try {
             return promotionRepository.save(promotion);
         } catch (Exception e) {
@@ -36,7 +37,7 @@ public class PromotionService {
     // Retrieve all promotions
     public List<Promotion> getAllPromotions() {
         try {
-            return promotionRepository.findAll();
+            return promotionRepository.findAllByIsDeletedFalse();
         } catch (Exception e) {
             throw new RuntimeException("Unable to retrieve promotions: " + e.getMessage(), e);
         }
@@ -45,7 +46,7 @@ public class PromotionService {
     // Retrieve a promotion by ID
     public Promotion getPromotionById(Integer id) {
         try {
-            return promotionRepository.findById(id)
+            return promotionRepository.findByIdAndIsDeletedFalse(id)
                     .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + id));
         } catch (Exception e) {
             throw new RuntimeException("Error retrieving promotion: " + e.getMessage(), e);
@@ -57,10 +58,17 @@ public class PromotionService {
         validatePromotionDates(promotion);
         validateDiscountValues(promotion);
         try {
-            if (!promotionRepository.existsById(promotion.getId())) {
-                throw new RuntimeException("Promotion not found with ID: " + promotion.getId());
-            }
-            return promotionRepository.save(promotion);
+            Promotion existingPromotion = promotionRepository.findByIdAndIsDeletedFalse(promotion.getId())
+                    .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + promotion.getId()));
+
+            existingPromotion.setName(promotion.getName());
+            existingPromotion.setDescription(promotion.getDescription());
+            existingPromotion.setDiscountType(promotion.getDiscountType());
+            existingPromotion.setDiscountValue(promotion.getDiscountValue());
+            existingPromotion.setStartDate(promotion.getStartDate());
+            existingPromotion.setEndDate(promotion.getEndDate());
+
+            return promotionRepository.save(existingPromotion);
         } catch (Exception e) {
             throw new RuntimeException("Unable to update promotion: " + e.getMessage(), e);
         }
@@ -70,15 +78,13 @@ public class PromotionService {
     @Transactional
     public void deletePromotion(Integer id) {
         try {
-            if (!promotionRepository.existsById(id)) {
-                throw new RuntimeException("Promotion not found with ID: " + id);
-            }
+            Promotion promotion = promotionRepository.findByIdAndIsDeletedFalse(id)
+                    .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + id));
 
-            // Xóa tất cả các bản ghi liên quan trong bảng productPromotion
-            productPromotionRepository.deleteByPromotionId(id);
+            promotion.setIsDeleted(true);
+            promotionRepository.save(promotion);
 
-            // Xóa promotion
-            promotionRepository.deleteById(id);
+            productPromotionRepository.softDeleteByPromotionId(id);
         } catch (Exception e) {
             throw new RuntimeException("Unable to delete promotion: " + e.getMessage(), e);
         }
@@ -110,19 +116,32 @@ public class PromotionService {
 
     @Transactional
     public void addProductsToPromotion(Integer promotionId, List<String> productIds) {
-        // Verify promotion exists
-        Promotion promotion = promotionRepository.findById(promotionId)
+        Promotion promotion = promotionRepository.findByIdAndIsDeletedFalse(promotionId)
                 .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + promotionId));
 
-        // Create ProductPromotion entries
-        List<ProductPromotion> productPromotions = productIds.stream()
+        // Kiểm tra xem promotion có đang hoạt động không
+        if (promotion.getEndDate().isBefore(Instant.now())) {
+            throw new RuntimeException("Cannot add products to an expired promotion");
+        }
+
+        // Lọc ra các sản phẩm chưa có trong promotion
+        List<String> existingProductIds = productPromotionRepository.findProductIdsByPromotionId(promotionId);
+        List<String> newProductIds = productIds.stream()
+                .filter(id -> !existingProductIds.contains(id))
+                .collect(Collectors.toList());
+
+        if (newProductIds.isEmpty()) {
+            return;
+        }
+
+        List<ProductPromotion> productPromotions = newProductIds.stream()
                 .map(productId -> ProductPromotion.builder()
                         .product(Product.builder().id(productId).build())
                         .promotion(promotion)
+                        .isDeleted(false)
                         .build())
                 .collect(Collectors.toList());
 
-        // Save all entries
         productPromotionRepository.saveAll(productPromotions);
     }
 }

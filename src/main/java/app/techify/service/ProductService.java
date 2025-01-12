@@ -289,10 +289,8 @@ public class ProductService {
             return predicate;
         });
 
-        // Thực hiện truy vấn với Specification
         Page<Product> productsPage = productRepository.findAll(spec, pageable);
 
-        // Chuyển đổi kết quả sang DTO
         return productsPage.map(this::convertToDTO);
     }
 
@@ -303,7 +301,7 @@ public class ProductService {
                 .filter(product -> {
                     List<ProductPromotion> promotions = productPromotionRepository.findByProductIdWithPromotion(product.getId());
                     return promotions.stream()
-                            .anyMatch(pp -> isPromotionActive(pp.getPromotion()));
+                            .anyMatch(pp -> !pp.getIsDeleted() && isPromotionActive(pp.getPromotion()));
                 })
                 .map(this::convertToDTO)
                 .limit(8)
@@ -323,7 +321,7 @@ public class ProductService {
         List<Product> products = productRepository.findAllWithDetails();
         return products.stream()
                 .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // Sort by creation date, newest first
-                .limit(4)
+                .limit(8)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
