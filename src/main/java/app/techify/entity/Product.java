@@ -119,6 +119,11 @@ public class Product {
     @Column(name = "available_quantity", nullable = false)
     private Integer availableQuantity;
 
+    @NotNull
+    @ColumnDefault("0")
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     public int getTotalSoldQuantity() {
         return orderDetails.stream()
                 .mapToInt(OrderDetail::getQuantity)

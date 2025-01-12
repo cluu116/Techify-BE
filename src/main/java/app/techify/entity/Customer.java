@@ -61,10 +61,4 @@ public class Customer {
     @Column(name = "address")
     private String address;
 
-    @OneToMany(mappedBy = "customer")
-    private Set<Order> orders = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "customer")
-    private Set<Review> reviews = new LinkedHashSet<>();
-
 }

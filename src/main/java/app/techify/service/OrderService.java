@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -72,7 +72,7 @@ public class OrderService {
         // Set IDs
         response.setCustomerId(order.getCustomer() != null ? order.getCustomer().getId() : null);
         response.setStaffId(order.getStaff() != null ? order.getStaff().getId() : null);
-        response.setPaymentMethodId(order.getPaymentMethod() != null ? order.getPaymentMethod().getName() : null);
+        response.setPaymentMethodId(order.getPaymentMethod() != null ? order.getPaymentMethod().getId() : null);
         response.setTransportVendorId(order.getTransportVendor() != null ? order.getTransportVendor().getId() : null);
         response.setVoucherId(order.getVoucher() != null ? order.getVoucher().getId() : null);
         
@@ -156,6 +156,7 @@ public class OrderService {
     public List<OrderResponse> getOrdersByCustomerId(String customerId) {
         List<Order> orders = orderRepository.findByCustomerId(customerId);
         return orders.stream()
+                .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
                 .map(this::convertToOrderResponse)
                 .collect(Collectors.toList());
     }

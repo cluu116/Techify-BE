@@ -64,6 +64,7 @@ public class ProductService {
                 .image(image)
                 .size(size)
                 .attribute(attribute)
+                .isDeleted(false)
                 .createdAt(Instant.now());
 
         switch (productDto.getStatus()) {
@@ -118,7 +119,10 @@ public class ProductService {
     }
 
     public void deleteProduct(String id) {
-        productRepository.deleteById(id);
+        Product product = productRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        product.setIsDeleted(true);
+        productRepository.save(product);
     }
 
     public List<GetProductDto> getAllProductsWithDetails() {
@@ -361,7 +365,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
 
-        List<Product> relatedProducts = productRepository.findByCategoryIdAndIdNot(
+        List<Product> relatedProducts = productRepository.findByCategoryIdAndIdNotAndIsDeletedFalse(
                 product.getCategory().getId(), productId);
 
         return relatedProducts.stream()
@@ -442,7 +446,7 @@ public class ProductService {
     }
 
     public void updateProductStatus(String id, Short status) {
-        Product productToUpdate = productRepository.findById(id)
+        Product productToUpdate = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         productToUpdate.setStatus(status);
         if (status == 2) {
@@ -450,5 +454,9 @@ public class ProductService {
         }
 
         productRepository.save(productToUpdate);
+    }
+
+    public boolean checkProductExists(String id) {
+        return productRepository.existsById(id);
     }
 }
