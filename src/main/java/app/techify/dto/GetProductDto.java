@@ -19,6 +19,8 @@ public class GetProductDto {
     private Integer warranty;
     private String description;
     private BigDecimal sellPrice;
+    private BigDecimal buyPrice;
+    private Double tax;
     private BigDecimal promotionPrice;
     private Integer reviewCount;
     private Double avgRating;
