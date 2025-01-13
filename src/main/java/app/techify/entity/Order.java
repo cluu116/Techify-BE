@@ -5,9 +5,11 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import net.minidev.json.annotate.JsonIgnore;
 import org.hibernate.annotations.Nationalized;
 
 import java.time.Instant;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -57,5 +59,11 @@ public class Order {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+    @JsonIgnore
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<OrderDetail> orderDetails;
+    public List<OrderDetail> getDetails() {
+        return orderDetails;
+    }
 
 }

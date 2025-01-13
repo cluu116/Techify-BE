@@ -49,4 +49,8 @@ public class OrderDetail {
     @Column(name = "size", length = 50)
     private String size;
 
+    public BigDecimal getTotal() {
+        return price.multiply(BigDecimal.valueOf(quantity));
+    }
+
 }
