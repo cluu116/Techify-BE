@@ -1,6 +1,6 @@
 package app.techify.controller;
 
-import app.techify.entity.PaymentMethod;
+import app.techify.dto.PaymentMethodDto;
 import app.techify.service.PaymentMethodService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,24 +17,24 @@ public class PaymentMethodController {
     private final PaymentMethodService paymentMethodService;
 
     @GetMapping("")
-    public ResponseEntity<List<PaymentMethod>> getAllPaymentMethods() {
+    public ResponseEntity<List<PaymentMethodDto>> getAllPaymentMethods() {
         return ResponseEntity.ok(paymentMethodService.getAllPaymentMethods());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PaymentMethod> getPaymentMethodById(@PathVariable Short id) {
+    public ResponseEntity<PaymentMethodDto> getPaymentMethodById(@PathVariable Short id) {
         return ResponseEntity.ok(paymentMethodService.getPaymentMethodById(id));
     }
 
     @PostMapping("")
-    public ResponseEntity<PaymentMethod> createPaymentMethod(@Valid @RequestBody PaymentMethod paymentMethod) {
-        return ResponseEntity.ok(paymentMethodService.createPaymentMethod(paymentMethod));
+    public ResponseEntity<PaymentMethodDto> createPaymentMethod(@RequestBody PaymentMethodDto paymentMethodDto) {
+        return ResponseEntity.ok(paymentMethodService.createPaymentMethod(paymentMethodDto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PaymentMethod> updatePaymentMethod(@PathVariable Short id, @Valid @RequestBody PaymentMethod paymentMethod) {
-        paymentMethod.setId(id);
-        return ResponseEntity.ok(paymentMethodService.updatePaymentMethod(paymentMethod));
+    public ResponseEntity<PaymentMethodDto> updatePaymentMethod(@PathVariable Short id, @Valid @RequestBody PaymentMethodDto paymentMethodDto) {
+        paymentMethodDto.setId(id);
+        return ResponseEntity.ok(paymentMethodService.updatePaymentMethod(paymentMethodDto));
     }
 
     @DeleteMapping("/{id}")
@@ -42,4 +42,4 @@ public class PaymentMethodController {
         paymentMethodService.deletePaymentMethod(id);
         return ResponseEntity.ok().build();
     }
-} 
+}

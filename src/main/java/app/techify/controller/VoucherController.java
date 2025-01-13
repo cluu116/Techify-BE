@@ -53,4 +53,9 @@ public class VoucherController {
         String result = voucherService.applyVoucher(voucherId, orderTotal);
         return ResponseEntity.ok(result);
     }
+    @PatchMapping("/{id}/quantity")
+    public ResponseEntity<Voucher> updateVoucherQuantity(@PathVariable String id, @RequestParam int quantity) {
+        Voucher updatedVoucher = voucherService.updateVoucherQuantity(id, quantity);
+        return ResponseEntity.ok(updatedVoucher);
+    }
 } 

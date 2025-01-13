@@ -20,26 +20,31 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(categoryDto.getName())
                 .parentCategory(ParentCategory.builder().id(categoryDto.getParentCategory()).build())
+                .isDeleted(false)
                 .build();
         categoryRepository.save(category);
     }
 
     public void updateCategory(Integer id, @Valid CategoryDto categoryDto) {
-        Category category = categoryRepository.findById(id).orElseThrow();
+        Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Danh mục không tồn tại"));
         category.setName(categoryDto.getName());
         category.setParentCategory(ParentCategory.builder().id(categoryDto.getParentCategory()).build());
         categoryRepository.save(category);
     }
 
     public void deleteCategory(Integer id) {
-        categoryRepository.deleteById(id);
+        Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Danh mục không tồn tại"));
+        category.setIsDeleted(true);
+        categoryRepository.save(category);
     }
 
     public List<Category> getCategories() {
-        return categoryRepository.findAll();
+        return categoryRepository.findAllByIsDeletedFalse();
     }
 
     public Category getCategoryById(Integer id) {
-        return categoryRepository.findById(id).orElse(null);
+        return categoryRepository.findByIdAndIsDeletedFalse(id).orElse(null);
     }
 }

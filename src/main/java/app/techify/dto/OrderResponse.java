@@ -8,7 +8,7 @@ public class OrderResponse {
     private String id;
     private String customerId;
     private String staffId;
-    private String paymentMethodId;
+    private Short paymentMethodId;
     private String transportVendorId;
     private String voucherId;
     private String customerName;

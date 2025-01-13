@@ -64,6 +64,7 @@ public class ProductService {
                 .image(image)
                 .size(size)
                 .attribute(attribute)
+                .isDeleted(false)
                 .createdAt(Instant.now());
 
         switch (productDto.getStatus()) {
@@ -76,7 +77,7 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public void updateProduct(String id, @Valid Product product) {
+    public void updateProduct(String id, Product product) {
         Product productToUpdate = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
 
@@ -94,31 +95,57 @@ public class ProductService {
         productToUpdate.setTax(product.getTax());
         productToUpdate.setDescription(product.getDescription());
         productToUpdate.setInventoryQuantity(product.getInventoryQuantity());
-        productToUpdate.setAvailableQuantity(product.getAvailableQuantity());
+        productToUpdate.setAvailableQuantity(product.getInventoryQuantity());
 
-        // Update related entities if they exist
         if (product.getColor() != null) {
-            Color color = colorRepository.save(product.getColor());
-            productToUpdate.setColor(color);
+            Color existingColor = productToUpdate.getColor();
+            if (existingColor != null) {
+                existingColor.setColorJson(product.getColor().getColorJson());
+                colorRepository.save(existingColor);
+            } else {
+                Color newColor = colorRepository.save(product.getColor());
+                productToUpdate.setColor(newColor);
+            }
         }
         if (product.getImage() != null) {
-            Image image = imageRepository.save(product.getImage());
-            productToUpdate.setImage(image);
+            Image existingImage = productToUpdate.getImage();
+            if (existingImage != null) {
+                existingImage.setImageJson(product.getImage().getImageJson());
+                imageRepository.save(existingImage);
+            } else {
+                Image newImage = imageRepository.save(product.getImage());
+                productToUpdate.setImage(newImage);
+            }
         }
         if (product.getAttribute() != null) {
-            Attribute attribute = attributeRepository.save(product.getAttribute());
-            productToUpdate.setAttribute(attribute);
+            Attribute existingAttribute = productToUpdate.getAttribute();
+            if (existingAttribute != null) {
+                existingAttribute.setAttributeJson(product.getAttribute().getAttributeJson());
+                attributeRepository.save(existingAttribute);
+            } else {
+                Attribute newAttribute = attributeRepository.save(product.getAttribute());
+                productToUpdate.setAttribute(newAttribute);
+            }
         }
         if (product.getSize() != null) {
-            Size size = sizeRepository.save(product.getSize());
-            productToUpdate.setSize(size);
+            Size existingSize = productToUpdate.getSize();
+            if (existingSize != null) {
+                existingSize.setSizeJson(product.getSize().getSizeJson());
+                sizeRepository.save(existingSize);
+            } else {
+                Size newSize = sizeRepository.save(product.getSize());
+                productToUpdate.setSize(newSize);
+            }
         }
 
         productRepository.save(productToUpdate);
     }
 
     public void deleteProduct(String id) {
-        productRepository.deleteById(id);
+        Product product = productRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        product.setIsDeleted(true);
+        productRepository.save(product);
     }
 
     public List<GetProductDto> getAllProductsWithDetails() {
@@ -136,6 +163,8 @@ public class ProductService {
         dto.setOrigin(product.getOrigin());
         dto.setUnit(product.getUnit());
         dto.setSellPrice(product.getSellPrice());
+        dto.setBuyPrice(product.getBuyPrice());
+        dto.setTax(product.getTax());
         dto.setColors(Optional.ofNullable(product.getColor()).map(Color::getColorJson).orElse(null));
         dto.setSizes(Optional.ofNullable(product.getSize()).map(Size::getSizeJson).orElse(null));
         dto.setDescription(product.getDescription());
@@ -285,10 +314,8 @@ public class ProductService {
             return predicate;
         });
 
-        // Thực hiện truy vấn với Specification
         Page<Product> productsPage = productRepository.findAll(spec, pageable);
 
-        // Chuyển đổi kết quả sang DTO
         return productsPage.map(this::convertToDTO);
     }
 
@@ -299,7 +326,7 @@ public class ProductService {
                 .filter(product -> {
                     List<ProductPromotion> promotions = productPromotionRepository.findByProductIdWithPromotion(product.getId());
                     return promotions.stream()
-                            .anyMatch(pp -> isPromotionActive(pp.getPromotion()));
+                            .anyMatch(pp -> !pp.getIsDeleted() && isPromotionActive(pp.getPromotion()));
                 })
                 .map(this::convertToDTO)
                 .limit(8)
@@ -319,7 +346,7 @@ public class ProductService {
         List<Product> products = productRepository.findAllWithDetails();
         return products.stream()
                 .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // Sort by creation date, newest first
-                .limit(4)
+                .limit(8)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -361,7 +388,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
 
-        List<Product> relatedProducts = productRepository.findByCategoryIdAndIdNot(
+        List<Product> relatedProducts = productRepository.findByCategoryIdAndIdNotAndIsDeletedFalse(
                 product.getCategory().getId(), productId);
 
         return relatedProducts.stream()
@@ -442,7 +469,7 @@ public class ProductService {
     }
 
     public void updateProductStatus(String id, Short status) {
-        Product productToUpdate = productRepository.findById(id)
+        Product productToUpdate = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         productToUpdate.setStatus(status);
         if (status == 2) {
@@ -450,5 +477,9 @@ public class ProductService {
         }
 
         productRepository.save(productToUpdate);
+    }
+
+    public boolean checkProductExists(String id) {
+        return productRepository.existsById(id);
     }
 }

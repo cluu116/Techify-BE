@@ -23,31 +23,35 @@ public class ParentCategoryService {
         ParentCategory parentCategory = ParentCategory.builder()
                 .name(parentCategoryDto.getName())
                 .thumbnail(parentCategoryDto.getThumbnail())
+                .isDeleted(false)
                 .build();
         parentCategoryRepository.save(parentCategory);
     }
 
     public void updateParentCategory(Integer id, ParentCategoryDto parentCategoryDto) {
-        ParentCategory parentCategory = parentCategoryRepository.findById(id).orElseThrow();
+        ParentCategory parentCategory = parentCategoryRepository.findByIdAndIsDeletedFalse(id).orElseThrow();
         parentCategory.setName(parentCategoryDto.getName());
         parentCategory.setThumbnail(parentCategoryDto.getThumbnail());
         parentCategoryRepository.save(parentCategory);
     }
 
     public ParentCategory getParentCategoryById(Integer id) {
-        return parentCategoryRepository.findById(id).orElse(null);
+        return parentCategoryRepository.findByIdAndIsDeletedFalse(id).orElse(null);
     }
 
     public void deleteParentCategory(Integer id) {
-        parentCategoryRepository.deleteById(id);
+        ParentCategory parentCategory = parentCategoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục cha"));
+        parentCategory.setIsDeleted(true);
+        parentCategoryRepository.save(parentCategory);
     }
 
     public List<ParentCategory> getParentCategories() {
-        return parentCategoryRepository.findAll();
+        return parentCategoryRepository.findAllByIsDeletedFalse();
     }
 
     public List<CategoryResponse> getParentCategoriesWithChildren() {
-        List<ParentCategory> parentCategories = parentCategoryRepository.findAll();
+        List<ParentCategory> parentCategories = parentCategoryRepository.findAllByIsDeletedFalse();
         return parentCategories.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());

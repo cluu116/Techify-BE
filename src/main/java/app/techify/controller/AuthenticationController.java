@@ -83,7 +83,7 @@ public class AuthenticationController {
 
             return ResponseEntity.ok(new AuthResponse(jwt, refreshToken));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Authentication failed: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Đăng nhập thất bại");
         }
     }
 
@@ -131,11 +131,6 @@ public class AuthenticationController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Xác thực người dùng thất bại");
         }
-    }
-
-    @GetMapping("/protected")
-    public ResponseEntity<String> protectedResource() {
-        return ResponseEntity.ok("Access granted to protected resource");
     }
 
     @GetMapping("/google")

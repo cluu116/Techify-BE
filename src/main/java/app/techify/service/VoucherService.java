@@ -18,11 +18,11 @@ public class VoucherService {
     private final VoucherRepository voucherRepository;
 
     public List<Voucher> getAllVouchers() {
-        return voucherRepository.findAll();
+        return voucherRepository.findAllByIsDeletedFalse();
     }
 
     public Voucher getVoucherById(String id) {
-        return voucherRepository.findById(id)
+        return voucherRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Voucher not found with id: " + id));
     }
 
@@ -33,25 +33,33 @@ public class VoucherService {
     }
 
     public Voucher updateVoucher(Voucher voucher) {
-        // Verify voucher exists
-        if (!voucherRepository.existsById(voucher.getId())) {
-            throw new RuntimeException("Voucher not found with id: " + voucher.getId());
-        }
+        Voucher existingVoucher = voucherRepository.findByIdAndIsDeletedFalse(voucher.getId())
+                .orElseThrow(() -> new RuntimeException("Voucher not found with id: " + voucher.getId()));
 
         validateVoucherDates(voucher);
         validateDiscountValues(voucher);
-        return voucherRepository.save(voucher);
+
+        existingVoucher.setId(voucher.getId());
+        existingVoucher.setStartDate(voucher.getStartDate());
+        existingVoucher.setEndDate(voucher.getEndDate());
+        existingVoucher.setDiscountType(voucher.getDiscountType());
+        existingVoucher.setDiscountValue(voucher.getDiscountValue());
+        existingVoucher.setMinOrder(voucher.getMinOrder());
+        existingVoucher.setMaxDiscount(voucher.getMaxDiscount());
+        existingVoucher.setUsageLimit(voucher.getUsageLimit());
+
+        return voucherRepository.save(existingVoucher);
     }
 
     public void deleteVoucher(String id) {
-        if (!checkVoucherExists(id)) {
-            throw new RuntimeException("Voucher not found with id: " + id);
-        }
-        voucherRepository.deleteById(id);
+        Voucher voucher = voucherRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Voucher not found with id: " + id));
+        voucher.setIsDeleted(true);
+        voucherRepository.save(voucher);
     }
 
     public boolean checkVoucherExists(String id) {
-        return voucherRepository.existsById(id);
+        return voucherRepository.existsByIdAndIsDeletedFalse(id);
     }
 
     private void validateVoucherDates(Voucher voucher) {
@@ -84,7 +92,7 @@ public class VoucherService {
 
     public String applyVoucher(String voucherId, BigDecimal orderTotal) {
         try {
-            Voucher voucher = voucherRepository.findById(voucherId)
+            Voucher voucher = voucherRepository.findByIdAndIsDeletedFalse(voucherId)
                     .orElseThrow(() -> new RuntimeException("Voucher không tồn tại: " + voucherId));
 
             Instant now = Instant.now();
@@ -124,5 +132,10 @@ public class VoucherService {
         } catch (Exception e) {
             return e.getMessage();
         }
+    }
+    public Voucher updateVoucherQuantity(String id, int quantity) {
+        Voucher voucher = getVoucherById(id);
+        voucher.setUsageLimit(quantity);
+        return voucherRepository.save(voucher);
     }
 } 

@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/product")
@@ -29,7 +31,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable String id, @Valid @RequestBody Product product) {
+    public ResponseEntity<?> updateProduct(@PathVariable String id, @RequestBody Product product) {
         try {
             productService.updateProduct(id, product);
             return ResponseEntity.ok("Updated successfully");
@@ -98,7 +100,7 @@ public class ProductController {
 
     @GetMapping("/top-selling")
     public ResponseEntity<List<GetProductDto>> getTopSellingProducts() {
-        return ResponseEntity.ok(productService.getTopSellingProducts(4));
+        return ResponseEntity.ok(productService.getTopSellingProducts(8));
     }
 
     @GetMapping("/brands/{categoryId}")
@@ -197,4 +199,13 @@ public class ProductController {
         productService.updateProductStatus(id, status);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/check/{id}")
+    public ResponseEntity<Map<String, Boolean>> checkProductExists(@PathVariable String id) {
+        boolean exists = productService.checkProductExists(id);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("exists", exists);
+        return ResponseEntity.ok(response);
+    }
+
 }

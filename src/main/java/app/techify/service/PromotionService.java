@@ -23,20 +23,39 @@ public class PromotionService {
 
 
     // Create a new promotion
-    public Promotion createPromotion(Promotion promotion) {
-        validatePromotionDates(promotion);
-        validateDiscountValues(promotion);
+    public String createPromotion(Promotion promotion) {
         try {
-            return promotionRepository.save(promotion);
+            validatePromotionDates(promotion);
+            validateDiscountValues(promotion);
+            checkOverlappingPromotions(promotion);
+            promotion.setIsDeleted(false);
+            promotionRepository.save(promotion);
+            return "Tạo khuyến mãi thành công";
+        } catch (IllegalStateException e) {
+            return "Lỗi: " + e.getMessage();
+        } catch (RuntimeException e) {
+            return "Lỗi: Không thể tạo khuyến mãi - " + e.getMessage();
         } catch (Exception e) {
-            throw new RuntimeException("Unable to create promotion: " + e.getMessage(), e);
+            return "Lỗi không xác định khi tạo khuyến mãi: " + e.getMessage();
+        }
+    }
+
+    private void checkOverlappingPromotions(Promotion newPromotion) {
+        List<Promotion> overlappingPromotions = promotionRepository.findOverlappingPromotions(
+                newPromotion.getStartDate(),
+                newPromotion.getEndDate(),
+                newPromotion.getId() == null ? -1 : newPromotion.getId()
+        );
+
+        if (!overlappingPromotions.isEmpty()) {
+            throw new IllegalStateException("Đã tồn tại khuyến mãi trong khoảng thời gian này. Vui lòng chọn khoảng thời gian khác.");
         }
     }
 
     // Retrieve all promotions
     public List<Promotion> getAllPromotions() {
         try {
-            return promotionRepository.findAll();
+            return promotionRepository.findAllByIsDeletedFalse();
         } catch (Exception e) {
             throw new RuntimeException("Unable to retrieve promotions: " + e.getMessage(), e);
         }
@@ -45,7 +64,7 @@ public class PromotionService {
     // Retrieve a promotion by ID
     public Promotion getPromotionById(Integer id) {
         try {
-            return promotionRepository.findById(id)
+            return promotionRepository.findByIdAndIsDeletedFalse(id)
                     .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + id));
         } catch (Exception e) {
             throw new RuntimeException("Error retrieving promotion: " + e.getMessage(), e);
@@ -53,16 +72,41 @@ public class PromotionService {
     }
 
     // Update an existing promotion
-    public Promotion updatePromotion(Promotion promotion) {
-        validatePromotionDates(promotion);
-        validateDiscountValues(promotion);
+    public String updatePromotion(Promotion promotion) {
         try {
-            if (!promotionRepository.existsById(promotion.getId())) {
-                throw new RuntimeException("Promotion not found with ID: " + promotion.getId());
+            validatePromotionDates(promotion);
+            validateDiscountValues(promotion);
+
+            Promotion existingPromotion = promotionRepository.findByIdAndIsDeletedFalse(promotion.getId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy khuyến mãi với ID: " + promotion.getId()));
+
+            if (!existingPromotion.getStartDate().equals(promotion.getStartDate()) ||
+                    !existingPromotion.getEndDate().equals(promotion.getEndDate())) {
+                List<Promotion> overlappingPromotions = promotionRepository.findOverlappingPromotions(
+                        promotion.getStartDate(),
+                        promotion.getEndDate(),
+                        promotion.getId()
+                );
+                if (!overlappingPromotions.isEmpty()) {
+                    return "Lỗi: Đã tồn tại khuyến mãi trong khoảng thời gian này. Vui lòng chọn khoảng thời gian khác.";
+                }
             }
-            return promotionRepository.save(promotion);
+
+            existingPromotion.setName(promotion.getName());
+            existingPromotion.setDescription(promotion.getDescription());
+            existingPromotion.setDiscountType(promotion.getDiscountType());
+            existingPromotion.setDiscountValue(promotion.getDiscountValue());
+            existingPromotion.setStartDate(promotion.getStartDate());
+            existingPromotion.setEndDate(promotion.getEndDate());
+
+            promotionRepository.save(existingPromotion);
+            return "Cập nhật khuyến mãi thành công";
+        } catch (IllegalStateException e) {
+            return "Lỗi: " + e.getMessage();
+        } catch (RuntimeException e) {
+            return "Lỗi: Không thể cập nhật khuyến mãi - " + e.getMessage();
         } catch (Exception e) {
-            throw new RuntimeException("Unable to update promotion: " + e.getMessage(), e);
+            return "Lỗi không xác định khi cập nhật khuyến mãi: " + e.getMessage();
         }
     }
 
@@ -70,15 +114,13 @@ public class PromotionService {
     @Transactional
     public void deletePromotion(Integer id) {
         try {
-            if (!promotionRepository.existsById(id)) {
-                throw new RuntimeException("Promotion not found with ID: " + id);
-            }
+            Promotion promotion = promotionRepository.findByIdAndIsDeletedFalse(id)
+                    .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + id));
 
-            // Xóa tất cả các bản ghi liên quan trong bảng productPromotion
-            productPromotionRepository.deleteByPromotionId(id);
+            promotion.setIsDeleted(true);
+            promotionRepository.save(promotion);
 
-            // Xóa promotion
-            promotionRepository.deleteById(id);
+            productPromotionRepository.softDeleteByPromotionId(id);
         } catch (Exception e) {
             throw new RuntimeException("Unable to delete promotion: " + e.getMessage(), e);
         }
@@ -110,19 +152,40 @@ public class PromotionService {
 
     @Transactional
     public void addProductsToPromotion(Integer promotionId, List<String> productIds) {
-        // Verify promotion exists
-        Promotion promotion = promotionRepository.findById(promotionId)
-                .orElseThrow(() -> new RuntimeException("Promotion not found with ID: " + promotionId));
+        if (productIds == null || productIds.isEmpty()) {
+            throw new IllegalArgumentException("Danh sách sản phẩm không được để trống.");
+        }
 
-        // Create ProductPromotion entries
-        List<ProductPromotion> productPromotions = productIds.stream()
+        Promotion promotion = promotionRepository.findByIdAndIsDeletedFalse(promotionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khuyến mãi với ID: " + promotionId));
+
+        // Kiểm tra xem promotion có đang hoạt động không
+        if (promotion.getEndDate().isBefore(Instant.now())) {
+            throw new IllegalStateException("Không thể thêm sản phẩm vào khuyến mãi đã hết hạn.");
+        }
+
+        // Lọc ra các sản phẩm chưa có trong promotion
+        List<String> existingProductIds = productPromotionRepository.findProductIdsByPromotionId(promotionId);
+        List<String> newProductIds = productIds.stream()
+                .filter(id -> !existingProductIds.contains(id))
+                .collect(Collectors.toList());
+
+        if (newProductIds.isEmpty()) {
+            throw new IllegalStateException("Tất cả sản phẩm đã tồn tại trong khuyến mãi này.");
+        }
+
+        List<ProductPromotion> productPromotions = newProductIds.stream()
                 .map(productId -> ProductPromotion.builder()
                         .product(Product.builder().id(productId).build())
                         .promotion(promotion)
+                        .isDeleted(false)
                         .build())
                 .collect(Collectors.toList());
 
-        // Save all entries
-        productPromotionRepository.saveAll(productPromotions);
+        try {
+            productPromotionRepository.saveAll(productPromotions);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi thêm sản phẩm vào khuyến mãi: " + e.getMessage(), e);
+        }
     }
 }
