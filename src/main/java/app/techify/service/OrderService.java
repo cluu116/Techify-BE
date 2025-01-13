@@ -76,11 +76,8 @@ public class OrderService {
         // Set IDs
         response.setCustomerId(order.getCustomer() != null ? order.getCustomer().getId() : null);
         response.setStaffId(order.getStaff() != null ? order.getStaff().getId() : null);
-
         response.setPaymentMethodId(order.getPaymentMethod() != null ? order.getPaymentMethod().getId() : null);
-
         response.setPaymentMethodId(order.getPaymentMethod() != null ? order.getPaymentMethod().getId() : null);
-
         response.setTransportVendorId(order.getTransportVendor() != null ? order.getTransportVendor().getId() : null);
         response.setVoucherId(order.getVoucher() != null ? order.getVoucher().getId() : null);
 
@@ -91,7 +88,6 @@ public class OrderService {
         response.setStaffName(order.getStaff() != null ? order.getStaff().getFullName() : null);
         response.setPaymentMethodName(order.getPaymentMethod() != null ? order.getPaymentMethod().getName() : null);
         response.setTransportVendorName(order.getTransportVendor() != null ? order.getTransportVendor().getName() : null);
-
         response.setShippingAddress(order.getShippingAddress());
         response.setStatus(order.getStatus());
 
