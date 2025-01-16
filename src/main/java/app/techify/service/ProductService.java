@@ -56,7 +56,7 @@ public class ProductService {
                 .inventoryQuantity(productDto.getInventoryQuantity())
                 .availableQuantity(productDto.getInventoryQuantity())
                 .warranty(productDto.getWarranty())
-                .buyPrice(productDto.getBuyPrice())
+                .buyPrice(productDto.getBuyPrice().add(productDto.getBuyPrice().multiply(BigDecimal.valueOf(productDto.getTax()).divide(BigDecimal.valueOf(100)))))
                 .sellPrice(productDto.getSellPrice().add(productDto.getSellPrice().multiply(BigDecimal.valueOf(productDto.getTax()).divide(BigDecimal.valueOf(100)))))
                 .tax(productDto.getTax())
                 .description(productDto.getDescription())
@@ -90,12 +90,18 @@ public class ProductService {
         productToUpdate.setUnit(product.getUnit());
         productToUpdate.setSerial(product.getSerial());
         productToUpdate.setWarranty(product.getWarranty());
-        productToUpdate.setBuyPrice(product.getBuyPrice());
-        productToUpdate.setSellPrice(product.getSellPrice());
+        productToUpdate.setBuyPrice(product.getBuyPrice().add(product.getBuyPrice().multiply(BigDecimal.valueOf(product.getTax()).divide(BigDecimal.valueOf(100)))));
+        productToUpdate.setSellPrice(product.getSellPrice().add(product.getSellPrice().multiply(BigDecimal.valueOf(product.getTax()).divide(BigDecimal.valueOf(100)))));
         productToUpdate.setTax(product.getTax());
         productToUpdate.setDescription(product.getDescription());
-        productToUpdate.setInventoryQuantity(product.getInventoryQuantity());
-        productToUpdate.setAvailableQuantity(product.getInventoryQuantity());
+        int newInventoryQuantity = productToUpdate.getInventoryQuantity() + product.getInventoryQuantity();
+        productToUpdate.setInventoryQuantity(newInventoryQuantity);
+        int newAvailableQuantity = productToUpdate.getAvailableQuantity() + product.getInventoryQuantity();
+        productToUpdate.setAvailableQuantity(newAvailableQuantity);
+
+        if (newAvailableQuantity >= 1 && newInventoryQuantity >= 1) {
+            productToUpdate.setStatus((short) 1);
+        }
 
         if (product.getColor() != null) {
             Color existingColor = productToUpdate.getColor();

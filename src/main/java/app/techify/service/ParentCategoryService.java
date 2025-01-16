@@ -61,7 +61,8 @@ public class ParentCategoryService {
         CategoryResponse response = new CategoryResponse();
         response.setId(parentCategory.getId());
         response.setName(parentCategory.getName());
-        
+        response.setThumbnail(parentCategory.getThumbnail());
+
         List<Category> childCategories = categoryRepository.findByParentCategoryId(parentCategory.getId());
         List<CategoryDto> childDtos = childCategories.stream()
                 .map(category -> {

@@ -1,10 +1,7 @@
 package app.techify.controller;
 
 import app.techify.dto.OrderResponse;
-import app.techify.entity.Account;
-import app.techify.entity.Customer;
-import app.techify.entity.Order;
-import app.techify.entity.OrderDetail;
+import app.techify.entity.*;
 import app.techify.repository.AccountRepository;
 import app.techify.repository.CustomerRepository;
 import app.techify.service.EmailService;
@@ -74,9 +71,7 @@ public class OrderController {
 
 
     @GetMapping("/generateInvoice/{orderId}")
-    public ResponseEntity<Map<String, Object>> generateInvoiceData(
-            @PathVariable String orderId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> generateInvoiceData(@PathVariable String orderId) {
         Optional<Order> optionalOrder = orderService.findById(orderId);
         if (optionalOrder.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -99,13 +94,14 @@ public class OrderController {
         response.put("customerEmail", order.getCustomer().getAccount().getEmail());
         response.put("details", details);
 
-        String sellerEmail = userDetails.getUsername();
-
-        Customer sellerCustomer = customerRepository.findByAccount_Email(sellerEmail);
-        if (sellerCustomer != null) {
-            response.put("sellerName", sellerCustomer.getFullName());
+        // Get seller information from the staff associated with the order
+        Staff staff = order.getStaff();
+        if (staff != null) {
+            response.put("sellerName", staff.getFullName());
+            response.put("sellerEmail", staff.getAccount().getEmail());
         } else {
             response.put("sellerName", "Không xác định");
+            response.put("sellerEmail", "Không xác định");
         }
 
         return ResponseEntity.ok(response);
@@ -158,6 +154,21 @@ public class OrderController {
         List<OrderResponse> orders = orderService.getOrdersByCustomerId(customerId);
         return ResponseEntity.ok(orders);
 
+    }
+
+    @PutMapping("/{orderId}/assign-staff/{staffId}")
+    public ResponseEntity<OrderResponse> assignStaffToOrder(
+            @PathVariable String orderId,
+            @PathVariable String staffId
+    ) {
+        try {
+            OrderResponse updatedOrder = orderService.assignStaffToOrder(orderId, staffId);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 }
 

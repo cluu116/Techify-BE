@@ -2,9 +2,11 @@ package app.techify.service;
 
 import app.techify.entity.Order;
 import app.techify.entity.OrderDetail;
+import app.techify.entity.Staff;
 import app.techify.entity.Voucher;
 import app.techify.repository.OrderDetailRepository;
 import app.techify.repository.OrderRepository;
+import app.techify.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import app.techify.dto.OrderResponse;
@@ -23,6 +25,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final StaffRepository staffRepository;
 
 
     public OrderResponse createOrder(Order order) {
@@ -181,5 +184,17 @@ public class OrderService {
                 .map(this::convertToOrderResponse)
                 .collect(Collectors.toList());
 
+    }
+
+    public OrderResponse assignStaffToOrder(String orderId, String staffId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng với ID: " + orderId));
+
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên với ID: " + staffId));
+
+        order.setStaff(staff);
+        Order updatedOrder = orderRepository.save(order);
+        return convertToOrderResponse(updatedOrder);
     }
 }

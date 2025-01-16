@@ -7,5 +7,6 @@ import java.util.List;
 public class CategoryResponse {
     private Integer id;
     private String name;
+    private String thumbnail;
     private List<CategoryDto> children;
 } 
