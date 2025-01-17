@@ -91,4 +91,8 @@ public class StaffService {
         }
         staffRepository.deleteById(id);
     }
+
+    public Staff findByPhone(String phone) {
+        return staffRepository.findByPhone(phone).orElse(null);
+    }
 } 

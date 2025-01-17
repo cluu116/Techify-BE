@@ -6,7 +6,10 @@ import app.techify.entity.Staff;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface StaffRepository extends JpaRepository<Staff, String> {
     Staff findStaffByAccount(Account account);
+    Optional<Staff> findByPhone(String phone);
 } 

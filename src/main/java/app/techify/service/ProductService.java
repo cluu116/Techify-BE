@@ -65,13 +65,8 @@ public class ProductService {
                 .size(size)
                 .attribute(attribute)
                 .isDeleted(false)
-                .createdAt(Instant.now());
-
-        switch (productDto.getStatus()) {
-            case "active" -> productBuilder.status((short) 1);
-            case "comingSoon" -> productBuilder.status((short) 4);
-            case null, default -> productBuilder.status((short) 0);
-        }
+                .createdAt(Instant.now())
+                .status((short) 1);
 
         Product product = productBuilder.build();
         productRepository.save(product);

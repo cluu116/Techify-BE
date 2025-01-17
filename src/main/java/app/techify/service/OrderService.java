@@ -69,7 +69,10 @@ public class OrderService {
 
     public List<OrderResponse> getAllOrdersWithDetails() {
         List<Order> orders = orderRepository.findAll();
-        return orders.stream().map(this::convertToOrderResponse).collect(Collectors.toList());
+        return orders.stream()
+                .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
+                .map(this::convertToOrderResponse)
+                .collect(Collectors.toList());
     }
 
     private OrderResponse convertToOrderResponse(Order order) {

@@ -50,4 +50,8 @@ public class CustomerService {
             throw new RuntimeException("Customer not found with id: " + customerId);
         }
     }
+
+    public Customer findByPhone(String phone) {
+        return customerRepository.findByPhone(phone).orElse(null);
+    }
 }

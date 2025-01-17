@@ -36,6 +36,7 @@ public class AdminInitializationService {
                     .email("techifyshop22@gmail.com")
                     .passwordHash(passwordEncoder.encode("Techify@123"))
                     .role("ADMIN")
+                    .avatar("https://lh3.googleusercontent.com/a/ACg8ocJ7Vok9rLRX4rrkvebCcZBiYFZM9d3_2m-L_LHmPtBwIL4XbjaX=s96-c")
                     .isDeleted(false)
                     .build();
 
