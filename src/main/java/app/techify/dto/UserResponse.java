@@ -17,9 +17,7 @@ public class UserResponse {
     private String district;
     private String ward;
     private String address;
-    private String altAddress;
     private String phone;
-    private String altPhone;
     private String email;
     private String role;
     private String avatar;

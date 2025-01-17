@@ -1,5 +1,6 @@
 package app.techify.controller;
 
+import app.techify.dto.StaffDto;
 import app.techify.entity.Staff;
 import app.techify.service.StaffService;
 import jakarta.validation.Valid;
@@ -33,9 +34,9 @@ public class StaffController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Staff> updateStaff(@PathVariable String id, @Valid @RequestBody Staff staff) {
-        staff.setId(id);
-        return ResponseEntity.ok(staffService.updateStaff(staff));
+    public ResponseEntity<Staff> updateStaff(@PathVariable String id, @Valid @RequestBody StaffDto updateDTO) {
+        Staff updatedStaff = staffService.updateStaff(id, updateDTO);
+        return ResponseEntity.ok(updatedStaff);
     }
 
     @DeleteMapping("/{id}")

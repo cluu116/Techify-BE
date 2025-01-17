@@ -60,8 +60,6 @@ public class Staff {
     @Column(name = "address")
     private String address;
 
-    @OneToMany(mappedBy = "staff")
-    private Set<Order> orders = new LinkedHashSet<>();
 
     @Size(max = 50)
     @Nationalized

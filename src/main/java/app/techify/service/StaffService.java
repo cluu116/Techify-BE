@@ -1,12 +1,15 @@
 package app.techify.service;
 
+import app.techify.dto.StaffDto;
 import app.techify.entity.Account;
 import app.techify.entity.Staff;
 import app.techify.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -41,11 +44,45 @@ public class StaffService {
                 .orElseThrow(() -> new RuntimeException("Staff not found with id: " + id));
     }
 
-    public Staff updateStaff(Staff staff) {
-        if (!staffRepository.existsById(staff.getId())) {
-            throw new RuntimeException("Staff not found with id: " + staff.getId());
+    @Transactional
+    public Staff updateStaff(String staffId, StaffDto updateDto) {
+        Optional<Staff> existingStaffOpt = staffRepository.findById(staffId);
+
+        if (existingStaffOpt.isPresent()) {
+            Staff existingStaff = existingStaffOpt.get();
+
+            if (updateDto.getFullName() != null) {
+                existingStaff.setFullName(updateDto.getFullName());
+            }
+            if (updateDto.getPhone() != null) {
+                existingStaff.setPhone(updateDto.getPhone());
+            }
+            if (updateDto.getProvince() != null) {
+                existingStaff.setProvince(updateDto.getProvince());
+            }
+            if (updateDto.getDistrict() != null) {
+                existingStaff.setDistrict(updateDto.getDistrict());
+            }
+            if (updateDto.getWard() != null) {
+                existingStaff.setWard(updateDto.getWard());
+            }
+            if (updateDto.getAddress() != null) {
+                existingStaff.setAddress(updateDto.getAddress());
+            }
+            if (updateDto.getDob() != null) {
+                existingStaff.setDob(updateDto.getDob());
+            }
+            if (updateDto.getGender() != null) {
+                existingStaff.setGender(updateDto.getGender());
+            }
+            if (updateDto.getCitizenId() != null) {
+                existingStaff.setCitizenId(updateDto.getCitizenId());
+            }
+
+            return staffRepository.save(existingStaff);
+        } else {
+            throw new RuntimeException("Staff not found with id: " + staffId);
         }
-        return staffRepository.save(staff);
     }
 
     public void deleteStaff(String id) {
